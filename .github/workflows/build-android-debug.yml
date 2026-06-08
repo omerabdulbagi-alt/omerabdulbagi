@@ -10,6 +10,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: refs/heads/main
+          fetch-depth: 0
+
+      - name: Verify build source
+        shell: bash
+        run: |
+          echo "Building main commit: $(git rev-parse HEAD)"
+          git log -1 --oneline
+          grep '^version:' pubspec.yaml
 
       - name: Set up Java
         uses: actions/setup-java@v4

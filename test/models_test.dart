@@ -30,7 +30,7 @@ void main() {
       id: 3,
       title: 'Review video',
       channelId: 1,
-      type: TaskType.fullYouTubeVideo,
+      type: TaskType.video,
       dueDate: DateTime(2026, 6, 12),
       priority: TaskPriority.high,
       status: TaskStatus.inProgress,
@@ -42,7 +42,7 @@ void main() {
     final restored = ManualTask.fromMap(task.toMap());
 
     expect(restored.title, 'Review video');
-    expect(restored.type, TaskType.fullYouTubeVideo);
+    expect(restored.type, TaskType.video);
     expect(restored.priority, TaskPriority.high);
     expect(restored.status, TaskStatus.inProgress);
     expect(restored.notes, 'Review audio and video');

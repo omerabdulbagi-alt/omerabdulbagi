@@ -1,3 +1,5 @@
+import 'package:sqflite_common/sqlite_api.dart';
+
 import 'local_database.dart';
 import 'models.dart';
 
@@ -21,6 +23,68 @@ class ContentRepository {
         END
       ''',
     )).map(Channel.fromMap).toList();
+  }
+
+  Future<int> saveChannel(Channel channel) async {
+    final db = await _localDatabase.database;
+    final values = channel.toMap()..remove('id');
+    if (channel.id == null) return db.insert('channels', values);
+    await db.update(
+      'channels',
+      values,
+      where: 'id = ?',
+      whereArgs: [channel.id],
+    );
+    return channel.id!;
+  }
+
+  Future<void> archiveChannel(int id, bool archived) async {
+    final db = await _localDatabase.database;
+    await db.update(
+      'channels',
+      {'archived': archived ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteCustomChannel(int id) async {
+    final db = await _localDatabase.database;
+    final taskRows = await db.rawQuery(
+      'SELECT COUNT(*) AS count FROM daily_tasks WHERE channel_id = ?',
+      [id],
+    );
+    final contentRows = await db.rawQuery(
+      'SELECT COUNT(*) AS count FROM content_items WHERE channel_id = ?',
+      [id],
+    );
+    final taskCount = taskRows.first['count'] as int? ?? 0;
+    final contentCount = contentRows.first['count'] as int? ?? 0;
+    if (taskCount + contentCount > 0) {
+      await archiveChannel(id, true);
+    } else {
+      await db.delete('channels', where: 'id = ?', whereArgs: [id]);
+    }
+  }
+
+  Future<Set<String>> getDismissedSuggestions(String date) async {
+    final db = await _localDatabase.database;
+    final rows = await db.query(
+      'dismissed_suggestions',
+      columns: ['suggestion_key'],
+      where: 'suggestion_date = ?',
+      whereArgs: [date],
+    );
+    return rows.map((row) => row['suggestion_key'] as String).toSet();
+  }
+
+  Future<void> dismissSuggestion(String key, String date) async {
+    final db = await _localDatabase.database;
+    await db.insert(
+      'dismissed_suggestions',
+      {'suggestion_key': key, 'suggestion_date': date},
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
   }
 
   Future<List<ContentItem>> getContentItems() async {

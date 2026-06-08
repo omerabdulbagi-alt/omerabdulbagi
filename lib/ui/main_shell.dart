@@ -7,6 +7,8 @@ import 'screens/content_library_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/tasks_screen.dart';
 import 'screens/workflow_screen.dart';
+import 'screens/settings_screen.dart';
+import 'widgets/quick_create_sheet.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.controller});
@@ -26,7 +28,7 @@ class _MainShellState extends State<MainShell> {
     'Calendar',
     'Today Tasks',
     'Channels',
-    'Backup',
+    'Settings',
   ];
 
   static const _icons = [
@@ -36,7 +38,7 @@ class _MainShellState extends State<MainShell> {
     Icons.calendar_month_outlined,
     Icons.task_alt_outlined,
     Icons.hub_outlined,
-    Icons.backup_outlined,
+    Icons.settings_outlined,
   ];
 
   static const _destinations = [
@@ -71,8 +73,8 @@ class _MainShellState extends State<MainShell> {
       label: Text('Channels'),
     ),
     NavigationRailDestination(
-      icon: Icon(Icons.backup_outlined),
-      label: Text('Backup'),
+      icon: Icon(Icons.settings_outlined),
+      label: Text('Settings'),
     ),
   ];
 
@@ -91,7 +93,7 @@ class _MainShellState extends State<MainShell> {
           CalendarScreen(controller: widget.controller),
           TasksScreen(controller: widget.controller),
           ChannelsScreen(controller: widget.controller),
-          const _BackupPlaceholder(),
+          SettingsScreen(controller: widget.controller),
         ];
         final content = widget.controller.isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -145,11 +147,43 @@ class _MainShellState extends State<MainShell> {
                   ),
                 ),
                 body: SafeArea(child: content),
+                floatingActionButton: FloatingActionButton.extended(
+                  onPressed: () => showQuickCreate(context, widget.controller),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Content'),
+                ),
+                bottomNavigationBar: NavigationBar(
+                  selectedIndex: _mobileIndex(_selectedIndex),
+                  onDestinationSelected: (index) =>
+                      setState(() => _selectedIndex = _screenIndex(index)),
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard),
+                      label: 'Home',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.task_alt_outlined),
+                      label: 'Tasks',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.video_library_outlined),
+                      label: 'Content',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.calendar_month_outlined),
+                      label: 'Calendar',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.hub_outlined),
+                      label: 'Channels',
+                    ),
+                  ],
+                ),
               );
             }
             return Scaffold(
               body: Row(
-                textDirection: TextDirection.rtl,
                 children: [
                   NavigationRail(
                     extended: constraints.maxWidth >= 1120,
@@ -172,24 +206,14 @@ class _MainShellState extends State<MainShell> {
       },
     );
   }
-}
 
-class _BackupPlaceholder extends StatelessWidget {
-  const _BackupPlaceholder();
+  int _mobileIndex(int screenIndex) {
+    const mapping = {0: 0, 4: 1, 1: 2, 3: 3, 5: 4};
+    return mapping[screenIndex] ?? 0;
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.cloud_off_outlined, size: 56),
-          SizedBox(height: 16),
-          Text('Backup and export'),
-          SizedBox(height: 8),
-          Text('This feature will be available in a future update.'),
-        ],
-      ),
-    );
+  int _screenIndex(int mobileIndex) {
+    const mapping = [0, 4, 1, 3, 5];
+    return mapping[mobileIndex];
   }
 }

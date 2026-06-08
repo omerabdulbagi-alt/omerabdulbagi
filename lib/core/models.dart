@@ -13,24 +13,63 @@ enum WorkflowStatus {
 
 class Channel {
   const Channel({
-    required this.id,
+    this.id,
     required this.name,
     required this.platform,
     required this.colorValue,
+    this.iconKey = 'video',
+    this.isDefault = false,
+    this.archived = false,
   });
 
-  final int id;
+  final int? id;
   final String name;
   final String platform;
   final int colorValue;
+  final String iconKey;
+  final bool isDefault;
+  final bool archived;
 
   String get taskLabel => name;
+
+  Map<String, Object?> toMap() => {
+    'id': id,
+    'name': name,
+    'platform': platform,
+    'color_value': colorValue,
+    'icon_key': iconKey,
+    'is_default': isDefault ? 1 : 0,
+    'archived': archived ? 1 : 0,
+  };
+
+  Channel copyWith({
+    int? id,
+    String? name,
+    String? platform,
+    int? colorValue,
+    String? iconKey,
+    bool? isDefault,
+    bool? archived,
+  }) {
+    return Channel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      platform: platform ?? this.platform,
+      colorValue: colorValue ?? this.colorValue,
+      iconKey: iconKey ?? this.iconKey,
+      isDefault: isDefault ?? this.isDefault,
+      archived: archived ?? this.archived,
+    );
+  }
 
   factory Channel.fromMap(Map<String, Object?> map) => Channel(
     id: map['id'] as int,
     name: map['name'] as String,
     platform: map['platform'] as String,
     colorValue: map['color_value'] as int,
+    iconKey: map['icon_key'] as String? ?? 'video',
+    isDefault: (map['is_default'] as int? ?? 0) == 1,
+    archived: (map['archived'] as int? ?? 0) == 1,
   );
 }
 
@@ -86,12 +125,12 @@ class ContentItem {
 }
 
 enum TaskType {
-  fullYouTubeVideo('Full YouTube Video'),
-  youtubeShort('YouTube Short'),
-  tiktokVideo('TikTok Video'),
-  facebookPost('Facebook Post'),
-  madihContent('Madih Content'),
-  other('Other');
+  video('Video'),
+  short('Short'),
+  post('Post'),
+  article('Article'),
+  audio('Audio'),
+  task('Task');
 
   const TaskType(this.label);
   final String label;
@@ -187,7 +226,7 @@ class ManualTask {
     id: map['id'] as int,
     title: map['title'] as String,
     channelId: map['channel_id'] as int,
-    type: TaskType.values.byName(map['task_type'] as String),
+    type: _taskTypeFromDatabase(map['task_type'] as String),
     dueDate: DateTime.parse(map['due_date'] as String),
     priority: TaskPriority.values.byName(map['priority'] as String),
     status: TaskStatus.values.byName(map['status'] as String),
@@ -197,4 +236,31 @@ class ManualTask {
         ? null
         : DateTime.parse(map['reminder_at'] as String),
   );
+}
+
+TaskType _taskTypeFromDatabase(String value) {
+  return switch (value) {
+    'fullYouTubeVideo' => TaskType.video,
+    'youtubeShort' || 'tiktokVideo' => TaskType.short,
+    'facebookPost' => TaskType.post,
+    'madihContent' => TaskType.audio,
+    'other' => TaskType.task,
+    _ => TaskType.values.byName(value),
+  };
+}
+
+class DashboardSuggestion {
+  const DashboardSuggestion({
+    required this.key,
+    required this.title,
+    required this.channelName,
+    required this.type,
+    required this.reason,
+  });
+
+  final String key;
+  final String title;
+  final String channelName;
+  final TaskType type;
+  final String reason;
 }

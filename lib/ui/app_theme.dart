@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const _background = Color(0xFF0C1220);
-  static const _surface = Color(0xFF161E2E);
-  static const _accent = Color(0xFF56D7A7);
+  static const _background = Color(0xFF08111F);
+  static const _surface = Color(0xFF111D31);
+  static const _accent = Color(0xFF5B8CFF);
 
   static ThemeData get dark {
     final scheme = ColorScheme.fromSeed(
@@ -30,7 +30,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF20252D),
+        fillColor: const Color(0xFF17253B),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -52,12 +52,17 @@ class AppTheme {
       ),
       navigationRailTheme: const NavigationRailThemeData(
         backgroundColor: _surface,
-        indicatorColor: Color(0xFF245842),
+        indicatorColor: Color(0xFF223E72),
         selectedIconTheme: IconThemeData(color: _accent),
         selectedLabelTextStyle: TextStyle(
           color: _accent,
           fontWeight: FontWeight.bold,
         ),
+      ),
+      navigationBarTheme: const NavigationBarThemeData(
+        backgroundColor: _surface,
+        indicatorColor: Color(0xFF223E72),
+        height: 68,
       ),
     );
   }

@@ -75,4 +75,28 @@ class NotificationService {
       debugPrint('Unable to cancel task reminder: $error');
     }
   }
+
+  Future<bool> showTestNotification() async {
+    if (!_isAndroid) return false;
+    try {
+      await _plugin.show(
+        900001,
+        'My Tasks',
+        'Notifications are working.',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'task_reminders',
+            'Task reminders',
+            channelDescription: 'Reminders for scheduled tasks',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+      );
+      return true;
+    } catch (error) {
+      debugPrint('Unable to show test notification: $error');
+      return false;
+    }
+  }
 }

@@ -16,14 +16,17 @@ class LocalDatabase {
     _database = await _databaseFactory.openDatabase(
       p.join(basePath, 'my_content_manager.db'),
       options: OpenDatabaseOptions(
-        version: 5,
+        version: 6,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE channels (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               name TEXT NOT NULL,
               platform TEXT NOT NULL,
-              color_value INTEGER NOT NULL
+              color_value INTEGER NOT NULL,
+              icon_key TEXT NOT NULL DEFAULT 'video',
+              is_default INTEGER NOT NULL DEFAULT 0,
+              archived INTEGER NOT NULL DEFAULT 0
             )
           ''');
           await db.execute('''
@@ -43,6 +46,7 @@ class LocalDatabase {
           ''');
           await _createManualTasksTable(db);
           await _createMetadataTable(db);
+          await _createDismissedSuggestionsTable(db);
           await _seedChannels(db);
           await _seedSampleContent(db);
         },
@@ -60,6 +64,9 @@ class LocalDatabase {
           if (oldVersion < 5) {
             await _upgradeToEnglishChannelsAndTaskState(db);
           }
+          if (oldVersion < 6) {
+            await _upgradeToChannelManagement(db);
+          }
         },
       ),
     );
@@ -68,20 +75,91 @@ class LocalDatabase {
 
   Future<void> _seedChannels(Database db) async {
     final channels = [
-      ['Zooli Arabic', 'YouTube', 0xFFFF5252],
-      ['Zooli English', 'YouTube', 0xFF42A5F5],
-      ['Zooli Arabic TikTok', 'TikTok', 0xFFAB47BC],
-      ['Balad360', 'Facebook', 0xFF5C6BC0],
-      ['Quran', 'YouTube', 0xFF66BB6A],
-      ['Madih', 'YouTube', 0xFFFFB74D],
+      ['Zooli Arabic', 'YouTube', 0xFF5B8CFF, 'video'],
+      ['Zooli English', 'YouTube', 0xFF64B5F6, 'language'],
+      ['Zooli Arabic TikTok', 'TikTok', 0xFFB47CFF, 'short'],
+      ['Balad360', 'Facebook', 0xFF4F7CFF, 'public'],
+      ['Quran', 'YouTube', 0xFF49C98A, 'book'],
+      ['Madih', 'YouTube', 0xFFFFA94D, 'audio'],
     ];
     for (final channel in channels) {
       await db.insert('channels', {
         'name': channel[0],
         'platform': channel[1],
         'color_value': channel[2],
+        'icon_key': channel[3],
+        'is_default': 1,
+        'archived': 0,
       });
     }
+  }
+
+  Future<void> _upgradeToChannelManagement(Database db) async {
+    await db.execute(
+      "ALTER TABLE channels ADD COLUMN icon_key TEXT NOT NULL DEFAULT 'video'",
+    );
+    await db.execute(
+      'ALTER TABLE channels ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE channels ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
+    );
+    await _createDismissedSuggestionsTable(db);
+
+    const defaults = {
+      'Zooli Arabic': ['video', 0xFF5B8CFF],
+      'Zooli English': ['language', 0xFF64B5F6],
+      'Zooli Arabic TikTok': ['short', 0xFFB47CFF],
+      'Balad360': ['public', 0xFF4F7CFF],
+      'Quran': ['book', 0xFF49C98A],
+      'Madih': ['audio', 0xFFFFA94D],
+    };
+    for (final entry in defaults.entries) {
+      final existing = await db.query(
+        'channels',
+        where: 'name = ?',
+        whereArgs: [entry.key],
+        limit: 1,
+      );
+      if (existing.isEmpty) {
+        await db.insert('channels', {
+          'name': entry.key,
+          'platform': entry.key == 'Balad360'
+              ? 'Facebook'
+              : entry.key == 'Zooli Arabic TikTok'
+              ? 'TikTok'
+              : 'YouTube',
+          'color_value': entry.value[1],
+          'icon_key': entry.value[0],
+          'is_default': 1,
+          'archived': 0,
+        });
+      } else {
+        await db.update(
+          'channels',
+          {
+            'icon_key': entry.value[0],
+            'color_value': entry.value[1],
+            'is_default': 1,
+          },
+          where: 'name = ?',
+          whereArgs: [entry.key],
+        );
+      }
+    }
+
+    await db.execute("""
+      UPDATE daily_tasks
+      SET task_type = CASE task_type
+        WHEN 'fullYouTubeVideo' THEN 'video'
+        WHEN 'youtubeShort' THEN 'short'
+        WHEN 'tiktokVideo' THEN 'short'
+        WHEN 'facebookPost' THEN 'post'
+        WHEN 'madihContent' THEN 'audio'
+        WHEN 'other' THEN 'task'
+        ELSE task_type
+      END
+    """);
   }
 
   Future<void> _createMetadataTable(DatabaseExecutor db) async {
@@ -89,6 +167,16 @@ class LocalDatabase {
       CREATE TABLE IF NOT EXISTS app_metadata (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _createDismissedSuggestionsTable(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS dismissed_suggestions (
+        suggestion_key TEXT NOT NULL,
+        suggestion_date TEXT NOT NULL,
+        PRIMARY KEY (suggestion_key, suggestion_date)
       )
     ''');
   }

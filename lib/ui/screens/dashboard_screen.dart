@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
+import '../widgets/channel_icon.dart';
 import '../widgets/content_editor_dialog.dart';
 import '../widgets/task_editor_dialog.dart';
 
@@ -18,12 +21,28 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateUtils.dateOnly(DateTime.now());
+    final now = DateTime.now();
+    final today = DateUtils.dateOnly(now);
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 7));
     final todayTasks = controller.tasks
         .where((task) => DateUtils.isSameDay(task.dueDate, today))
         .toList();
+    final weekTasks = controller.tasks
+        .where(
+          (task) =>
+              !task.dueDate.isBefore(weekStart) &&
+              task.dueDate.isBefore(weekEnd),
+        )
+        .toList();
     final pending = todayTasks.where((task) => !task.completed).toList();
     final completed = todayTasks.where((task) => task.completed).toList();
+    final todayRate = todayTasks.isEmpty
+        ? 0.0
+        : completed.length / todayTasks.length;
+    final weekCompleted = weekTasks.where((task) => task.completed).length;
+    final weekRate = weekTasks.isEmpty ? 0.0 : weekCompleted / weekTasks.length;
+    final score = ((todayRate + weekRate) / 2 * 100).round();
 
     return CustomScrollView(
       slivers: [
@@ -31,8 +50,11 @@ class DashboardScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           sliver: SliverToBoxAdapter(
             child: _HeroCard(
-              pendingCount: pending.length,
-              completedCount: completed.length,
+              greeting: _greeting(now.hour),
+              completed: completed.length,
+              total: todayTasks.length,
+              pending: pending.length,
+              score: score,
             ),
           ),
         ),
@@ -45,7 +67,7 @@ class DashboardScreen extends StatelessWidget {
                   child: _QuickAction(
                     icon: Icons.add_task,
                     label: 'Add Today Task',
-                    color: const Color(0xFF56D7A7),
+                    color: const Color(0xFF5B8CFF),
                     onTap: () =>
                         showTaskEditor(context, controller, initialDate: today),
                   ),
@@ -55,7 +77,7 @@ class DashboardScreen extends StatelessWidget {
                   child: _QuickAction(
                     icon: Icons.video_library_outlined,
                     label: 'Add Content',
-                    color: const Color(0xFF7C8CFF),
+                    color: const Color(0xFF49C98A),
                     onTap: () => showContentEditor(context, controller),
                   ),
                 ),
@@ -63,82 +85,133 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
         ),
+        _WeeklyProgress(controller: controller, weekTasks: weekTasks),
+        _ChannelOverview(
+          controller: controller,
+          weekStart: weekStart,
+          weekEnd: weekEnd,
+        ),
+        if (controller.todaySuggestions.isNotEmpty)
+          _Suggestions(controller: controller, today: today),
         _TaskSection(
-          title: 'Pending Tasks',
+          title: 'Pending Today',
           icon: Icons.pending_actions,
-          color: const Color(0xFFFFB65C),
+          color: const Color(0xFF5B8CFF),
           tasks: pending,
           controller: controller,
-          emptyText: 'Nothing pending today. Nice work!',
+          emptyText: 'No pending tasks for today.',
         ),
         _TaskSection(
-          title: 'Completed Tasks',
+          title: 'Completed Today',
           icon: Icons.check_circle_outline,
-          color: const Color(0xFF56D7A7),
+          color: const Color(0xFF49C98A),
           tasks: completed,
           controller: controller,
           emptyText: 'Completed tasks will appear here.',
         ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 28)),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
       ],
     );
+  }
+
+  String _greeting(int hour) {
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.pendingCount, required this.completedCount});
-
-  final int pendingCount;
-  final int completedCount;
+  const _HeroCard({
+    required this.greeting,
+    required this.completed,
+    required this.total,
+    required this.pending,
+    required this.score,
+  });
+  final String greeting;
+  final int completed;
+  final int total;
+  final int pending;
+  final int score;
 
   @override
   Widget build(BuildContext context) {
+    final progress = total == 0 ? 0.0 : completed / total;
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF263B67), Color(0xFF18243F)],
+          colors: [Color(0xFF274A86), Color(0xFF132641)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 28,
-            offset: Offset(0, 12),
-          ),
-        ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
+            greeting,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
             DateFormat('EEEE, MMMM d').format(DateTime.now()),
             style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Today Tasks',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
           Row(
             children: [
-              _CountBadge(
-                count: pendingCount,
-                label: 'Pending',
-                color: const Color(0xFFFFB65C),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Today Progress'),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 9,
+                      borderRadius: BorderRadius.circular(10),
+                      backgroundColor: Colors.white12,
+                      color: const Color(0xFF49C98A),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '$completed / $total completed · $pending pending',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 12),
-              _CountBadge(
-                count: completedCount,
-                label: 'Completed',
-                color: const Color(0xFF56D7A7),
+              const SizedBox(width: 20),
+              SizedBox(
+                width: 84,
+                height: 84,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      value: score / 100,
+                      strokeWidth: 8,
+                      backgroundColor: Colors.white12,
+                      color: const Color(0xFFFFA94D),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$score%',
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        const Text('Score', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -148,42 +221,306 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({
-    required this.count,
-    required this.label,
-    required this.color,
-  });
+class _WeeklyProgress extends StatelessWidget {
+  const _WeeklyProgress({required this.controller, required this.weekTasks});
+  final AppController controller;
+  final List<ManualTask> weekTasks;
 
-  final int count;
-  final String label;
-  final Color color;
+  static const targets = {
+    'Madih': 7,
+    'Balad360': 3,
+    'Zooli Arabic': 2,
+    'Zooli English': 2,
+    'Zooli Arabic TikTok': 2,
+    'Quran': 0,
+  };
 
   @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          children: [
-            Text(
-              '$count',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+    sliver: SliverToBoxAdapter(
+      child: _SectionCard(
+        title: 'Weekly Progress',
+        icon: Icons.insights_outlined,
+        child: Column(
+          children: targets.entries.map((entry) {
+            final channel = controller.channelNamed(entry.key);
+            final completed = channel == null
+                ? 0
+                : weekTasks
+                      .where(
+                        (task) =>
+                            task.channelId == channel.id && task.completed,
+                      )
+                      .length;
+            final target = entry.value;
+            final denominator = target == 0
+                ? math.max(
+                    1,
+                    channel == null
+                        ? 0
+                        : weekTasks
+                              .where((task) => task.channelId == channel.id)
+                              .length,
+                  )
+                : target;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Expanded(child: Text(entry.key)),
+                  SizedBox(
+                    width: 110,
+                    child: LinearProgressIndicator(
+                      value: (completed / denominator).clamp(0, 1),
+                      minHeight: 7,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 48,
+                    child: Text(
+                      target == 0 ? '$completed' : '$completed/$target',
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(label),
-          ],
+            );
+          }).toList(),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+class _ChannelOverview extends StatelessWidget {
+  const _ChannelOverview({
+    required this.controller,
+    required this.weekStart,
+    required this.weekEnd,
+  });
+  final AppController controller;
+  final DateTime weekStart;
+  final DateTime weekEnd;
+
+  @override
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+    sliver: SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Title(icon: Icons.hub_outlined, title: 'Channel Overview'),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 190,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: controller.activeChannels.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final channel = controller.activeChannels[index];
+                final tasks = controller.tasks
+                    .where((task) => task.channelId == channel.id)
+                    .toList();
+                final completedWeek = tasks
+                    .where(
+                      (task) =>
+                          task.completed &&
+                          !task.dueDate.isBefore(weekStart) &&
+                          task.dueDate.isBefore(weekEnd),
+                    )
+                    .length;
+                final dates = controller.items
+                    .where(
+                      (item) =>
+                          item.channelId == channel.id &&
+                          item.scheduledDate != null,
+                    )
+                    .map((item) => item.scheduledDate!)
+                    .toList()
+                  ..sort();
+                return SizedBox(
+                  width: 245,
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Color(channel.colorValue),
+                                child: Icon(
+                                  channelIcon(channel.iconKey),
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      channel.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    Text(channel.platform),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Text('${tasks.where((task) => !task.completed).length} pending'),
+                          Text('$completedWeek completed this week'),
+                          Text(
+                            dates.isEmpty
+                                ? 'No content date'
+                                : 'Last content ${DateFormat('MMM d').format(dates.last)}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => showTaskEditor(
+                                context,
+                                controller,
+                                initialDate: DateUtils.dateOnly(DateTime.now()),
+                                initialChannelId: channel.id,
+                              ),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add Task'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _Suggestions extends StatelessWidget {
+  const _Suggestions({required this.controller, required this.today});
+  final AppController controller;
+  final DateTime today;
+
+  @override
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+    sliver: SliverToBoxAdapter(
+      child: _SectionCard(
+        title: 'Suggested for Today',
+        icon: Icons.auto_awesome_outlined,
+        child: Column(
+          children: controller.todaySuggestions.map((suggestion) {
+            final channel = controller.channelNamed(suggestion.channelName)!;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: Color(channel.colorValue),
+                child: Icon(channelIcon(channel.iconKey), color: Colors.white),
+              ),
+              title: Text(suggestion.title),
+              subtitle: Text(suggestion.reason),
+              trailing: Wrap(
+                spacing: 2,
+                children: [
+                  IconButton(
+                    tooltip: 'Dismiss',
+                    onPressed: () =>
+                        controller.dismissSuggestion(suggestion.key),
+                    icon: const Icon(Icons.close),
+                  ),
+                  IconButton.filled(
+                    tooltip: 'Add to Today',
+                    onPressed: () async {
+                      await controller.saveTask(
+                        ManualTask(
+                          title: suggestion.title,
+                          channelId: channel.id!,
+                          type: suggestion.type,
+                          dueDate: today,
+                          priority: TaskPriority.medium,
+                          status: TaskStatus.planned,
+                        ),
+                      );
+                      await controller.dismissSuggestion(suggestion.key);
+                    },
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    ),
+  );
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Title(icon: icon, title: title),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    ),
+  );
+}
+
+class _Title extends StatelessWidget {
+  const _Title({required this.icon, required this.title});
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, color: Theme.of(context).colorScheme.primary),
+      const SizedBox(width: 8),
+      Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+      ),
+    ],
+  );
 }
 
 class _QuickAction extends StatelessWidget {
@@ -193,37 +530,34 @@ class _QuickAction extends StatelessWidget {
     required this.color,
     required this.onTap,
   });
-
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withValues(alpha: 0.12),
+  Widget build(BuildContext context) => Material(
+    color: color.withValues(alpha: 0.12),
+    borderRadius: BorderRadius.circular(20),
+    child: InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 30),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 29),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _TaskSection extends StatelessWidget {
@@ -235,7 +569,6 @@ class _TaskSection extends StatelessWidget {
     required this.controller,
     required this.emptyText,
   });
-
   final String title;
   final IconData icon;
   final Color color;
@@ -244,54 +577,33 @@ class _TaskSection extends StatelessWidget {
   final String emptyText;
 
   @override
-  Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-      sliver: SliverList(
-        delegate: SliverChildListDelegate([
-          Row(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (tasks.isEmpty)
-            Container(
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+    sliver: SliverList(
+      delegate: SliverChildListDelegate([
+        _Title(icon: icon, title: title),
+        const SizedBox(height: 10),
+        if (tasks.isEmpty)
+          Card(
+            child: Padding(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                emptyText,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            )
-          else
-            ...tasks.map(
-              (task) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _TodayTaskCard(task: task, controller: controller),
-              ),
+              child: Text(emptyText),
             ),
-        ]),
-      ),
-    );
-  }
+          )
+        else
+          ...tasks.map(
+            (task) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _TodayTaskCard(task: task, controller: controller),
+            ),
+          ),
+      ]),
+    ),
+  );
 }
 
 class _TodayTaskCard extends StatelessWidget {
   const _TodayTaskCard({required this.task, required this.controller});
-
   final ManualTask task;
   final AppController controller;
 
@@ -327,9 +639,8 @@ class _TodayTaskCard extends StatelessWidget {
                             : null,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     Text(
-                      '${channel.name} · ${task.priority.label}',
+                      '${channel.name} · ${task.type.label} · ${task.priority.label}',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
@@ -339,10 +650,8 @@ class _TodayTaskCard extends StatelessWidget {
                 ),
               ),
               if (task.reminderAt != null)
-                const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Icon(Icons.notifications_active_outlined, size: 19),
-                ),
+                const Icon(Icons.notifications_active_outlined, size: 19),
+              const SizedBox(width: 8),
             ],
           ),
         ),

@@ -49,7 +49,8 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
     _description = TextEditingController(text: item?.description);
     _notes = TextEditingController(text: item?.notes);
     _url = TextEditingController(text: item?.publishedUrl);
-    _channelId = item?.channelId ?? widget.controller.channels.first.id;
+    _channelId =
+        item?.channelId ?? widget.controller.activeChannels.first.id!;
     _type = item?.type ?? _types.first;
     _status = item?.status ?? WorkflowStatus.idea;
     _scheduledDate = item?.scheduledDate;
@@ -175,9 +176,12 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
       initialValue: _channelId,
       decoration: const InputDecoration(labelText: 'Channel'),
       items: widget.controller.channels
+          .where(
+            (channel) => !channel.archived || channel.id == _channelId,
+          )
           .map(
             (channel) => DropdownMenuItem(
-              value: channel.id,
+              value: channel.id!,
               child: Text('${channel.name} · ${channel.platform}'),
             ),
           )

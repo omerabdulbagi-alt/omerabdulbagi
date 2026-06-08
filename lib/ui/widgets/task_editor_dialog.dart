@@ -9,6 +9,9 @@ Future<void> showTaskEditor(
   AppController controller, {
   ManualTask? task,
   DateTime? initialDate,
+  int? initialChannelId,
+  TaskType? initialType,
+  String? initialTitle,
 }) async {
   await showDialog<void>(
     context: context,
@@ -17,6 +20,9 @@ Future<void> showTaskEditor(
       controller: controller,
       task: task,
       initialDate: initialDate,
+      initialChannelId: initialChannelId,
+      initialType: initialType,
+      initialTitle: initialTitle,
     ),
   );
 }
@@ -27,11 +33,17 @@ class TaskEditorDialog extends StatefulWidget {
     required this.controller,
     this.task,
     this.initialDate,
+    this.initialChannelId,
+    this.initialType,
+    this.initialTitle,
   });
 
   final AppController controller;
   final ManualTask? task;
   final DateTime? initialDate;
+  final int? initialChannelId;
+  final TaskType? initialType;
+  final String? initialTitle;
 
   @override
   State<TaskEditorDialog> createState() => _TaskEditorDialogState();
@@ -54,10 +66,13 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
   void initState() {
     super.initState();
     final task = widget.task;
-    _title = TextEditingController(text: task?.title);
+    _title = TextEditingController(text: task?.title ?? widget.initialTitle);
     _notes = TextEditingController(text: task?.notes);
-    _channelId = task?.channelId ?? widget.controller.channels.first.id;
-    _type = task?.type ?? TaskType.fullYouTubeVideo;
+    _channelId =
+        task?.channelId ??
+        widget.initialChannelId ??
+        widget.controller.activeChannels.first.id!;
+    _type = task?.type ?? widget.initialType ?? TaskType.task;
     _dueDate = task?.dueDate ?? widget.initialDate ?? DateTime.now();
     _priority = task?.priority ?? TaskPriority.medium;
     _status = task?.status ?? TaskStatus.planned;
@@ -97,9 +112,13 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                   initialValue: _channelId,
                   decoration: const InputDecoration(labelText: 'Channel'),
                   items: widget.controller.channels
+                      .where(
+                        (channel) =>
+                            !channel.archived || channel.id == _channelId,
+                      )
                       .map(
                         (channel) => DropdownMenuItem(
-                          value: channel.id,
+                          value: channel.id!,
                           child: Text(channel.taskLabel),
                         ),
                       )

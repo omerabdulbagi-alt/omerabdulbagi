@@ -32,8 +32,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PageHeader(
-            title: 'التقويم',
-            subtitle: 'المهام موزعة حسب التاريخ',
+            title: 'Calendar',
+            subtitle: 'Tasks organized by date',
             action: Row(
               children: [
                 IconButton(
@@ -44,7 +44,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   width: 150,
                   child: Center(
                     child: Text(
-                      DateFormat('MMMM yyyy', 'ar').format(_month),
+                      DateFormat('MMMM yyyy').format(_month),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
@@ -69,13 +69,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       children: [
                         const Row(
                           children: [
-                            _Weekday('الأحد'),
-                            _Weekday('الاثنين'),
-                            _Weekday('الثلاثاء'),
-                            _Weekday('الأربعاء'),
-                            _Weekday('الخميس'),
-                            _Weekday('الجمعة'),
-                            _Weekday('السبت'),
+                            _Weekday('Sun'),
+                            _Weekday('Mon'),
+                            _Weekday('Tue'),
+                            _Weekday('Wed'),
+                            _Weekday('Thu'),
+                            _Weekday('Fri'),
+                            _Weekday('Sat'),
                           ],
                         ),
                         const SizedBox(height: 8),

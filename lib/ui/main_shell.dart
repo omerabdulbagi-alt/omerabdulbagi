@@ -20,13 +20,13 @@ class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
   static const _labels = [
-    'الرئيسية',
-    'المحتوى',
-    'سير العمل',
-    'التقويم',
-    'المهام',
-    'القنوات',
-    'النسخ الاحتياطي',
+    'Home',
+    'Content',
+    'Workflow',
+    'Calendar',
+    'Today Tasks',
+    'Channels',
+    'Backup',
   ];
 
   static const _icons = [
@@ -43,36 +43,36 @@ class _MainShellState extends State<MainShell> {
     NavigationRailDestination(
       icon: Icon(Icons.dashboard_outlined),
       selectedIcon: Icon(Icons.dashboard),
-      label: Text('الرئيسية'),
+      label: Text('Home'),
     ),
     NavigationRailDestination(
       icon: Icon(Icons.video_library_outlined),
       selectedIcon: Icon(Icons.video_library),
-      label: Text('المحتوى'),
+      label: Text('Content'),
     ),
     NavigationRailDestination(
       icon: Icon(Icons.view_kanban_outlined),
       selectedIcon: Icon(Icons.view_kanban),
-      label: Text('سير العمل'),
+      label: Text('Workflow'),
     ),
     NavigationRailDestination(
       icon: Icon(Icons.calendar_month_outlined),
       selectedIcon: Icon(Icons.calendar_month),
-      label: Text('التقويم'),
+      label: Text('Calendar'),
     ),
     NavigationRailDestination(
       icon: Icon(Icons.task_alt_outlined),
       selectedIcon: Icon(Icons.task_alt),
-      label: Text('المهام'),
+      label: Text('Today Tasks'),
     ),
     NavigationRailDestination(
       icon: Icon(Icons.hub_outlined),
       selectedIcon: Icon(Icons.hub),
-      label: Text('القنوات'),
+      label: Text('Channels'),
     ),
     NavigationRailDestination(
       icon: Icon(Icons.backup_outlined),
-      label: Text('النسخ الاحتياطي'),
+      label: Text('Backup'),
     ),
   ];
 
@@ -116,7 +116,7 @@ class _MainShellState extends State<MainShell> {
                               Icon(Icons.auto_awesome_mosaic, size: 30),
                               SizedBox(width: 12),
                               Text(
-                                'مدير المحتوى',
+                                'My Tasks',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -185,9 +185,9 @@ class _BackupPlaceholder extends StatelessWidget {
         children: [
           Icon(Icons.cloud_off_outlined, size: 56),
           SizedBox(height: 16),
-          Text('النسخ الاحتياطي والتصدير'),
+          Text('Backup and export'),
           SizedBox(height: 8),
-          Text('سيتم توفير هذه الميزة في إصدار لاحق'),
+          Text('This feature will be available in a future update.'),
         ],
       ),
     );

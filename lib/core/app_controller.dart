@@ -2,17 +2,22 @@ import 'package:flutter/foundation.dart';
 
 import 'content_repository.dart';
 import 'models.dart';
+import 'notification_service.dart';
 
 class AppController extends ChangeNotifier {
-  AppController(this._repository);
+  AppController(this._repository, this._notifications);
   final ContentRepository _repository;
+  final NotificationService _notifications;
 
   List<Channel> channels = [];
   List<ContentItem> items = [];
   List<ManualTask> tasks = [];
   bool isLoading = true;
 
-  Future<void> initialize() async => refresh();
+  Future<void> initialize() async {
+    await _notifications.initialize();
+    await refresh();
+  }
 
   Future<void> refresh() async {
     isLoading = true;
@@ -35,13 +40,19 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> saveTask(ManualTask task) async {
-    await _repository.saveTask(task);
+    final id = await _repository.saveTask(task);
+    await _notifications.syncTask(task.copyWith(id: id));
     await refresh();
   }
 
   Future<void> deleteTask(int id) async {
+    await _notifications.cancelTask(id);
     await _repository.deleteTask(id);
     await refresh();
+  }
+
+  Future<void> setTaskCompleted(ManualTask task, bool completed) async {
+    await saveTask(task.copyWith(completed: completed));
   }
 
   Channel channelFor(int id) => channels.firstWhere((item) => item.id == id);

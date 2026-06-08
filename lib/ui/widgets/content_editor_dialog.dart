@@ -39,7 +39,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
   DateTime? _scheduledDate;
   bool _saving = false;
 
-  static const _types = ['فيديو طويل', 'فيديو قصير', 'منشور', 'بث مباشر'];
+  static const _types = ['Full Video', 'Short Video', 'Post', 'Live Stream'];
 
   @override
   void initState() {
@@ -69,7 +69,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
     final isPhone = MediaQuery.sizeOf(context).width < 600;
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(widget.item == null ? 'إضافة محتوى جديد' : 'تعديل المحتوى'),
+      title: Text(widget.item == null ? 'Add Content' : 'Edit Content'),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
         child: Form(
@@ -79,9 +79,9 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
               children: [
                 TextFormField(
                   controller: _title,
-                  decoration: const InputDecoration(labelText: 'عنوان المحتوى'),
+                  decoration: const InputDecoration(labelText: 'Content title'),
                   validator: (value) => value == null || value.trim().isEmpty
-                      ? 'أدخل عنوان المحتوى'
+                      ? 'Enter a content title'
                       : null,
                 ),
                 const SizedBox(height: 12),
@@ -122,7 +122,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
                   minLines: 3,
                   maxLines: 5,
                   decoration: const InputDecoration(
-                    labelText: 'الوصف أو النص',
+                    labelText: 'Description or script',
                     alignLabelWithHint: true,
                   ),
                 ),
@@ -132,14 +132,14 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
                   minLines: 2,
                   maxLines: 4,
                   decoration: const InputDecoration(
-                    labelText: 'ملاحظات',
+                    labelText: 'Notes',
                     alignLabelWithHint: true,
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _url,
-                  decoration: const InputDecoration(labelText: 'رابط النشر'),
+                  decoration: const InputDecoration(labelText: 'Published URL'),
                 ),
               ],
             ),
@@ -149,12 +149,12 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('إلغاء'),
+          child: const Text('Cancel'),
         ),
         FilledButton.icon(
           onPressed: _saving ? null : _save,
           icon: const Icon(Icons.save_outlined),
-          label: Text(_saving ? 'جارٍ الحفظ...' : 'حفظ'),
+          label: Text(_saving ? 'Saving...' : 'Save'),
         ),
       ],
     );
@@ -173,7 +173,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
   Widget _channelField() {
     return DropdownButtonFormField<int>(
       initialValue: _channelId,
-      decoration: const InputDecoration(labelText: 'القناة'),
+      decoration: const InputDecoration(labelText: 'Channel'),
       items: widget.controller.channels
           .map(
             (channel) => DropdownMenuItem(
@@ -189,7 +189,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
   Widget _typeField() {
     return DropdownButtonFormField<String>(
       initialValue: _type,
-      decoration: const InputDecoration(labelText: 'النوع'),
+      decoration: const InputDecoration(labelText: 'Type'),
       items: _types
           .map((type) => DropdownMenuItem(value: type, child: Text(type)))
           .toList(),
@@ -200,7 +200,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
   Widget _statusField() {
     return DropdownButtonFormField<WorkflowStatus>(
       initialValue: _status,
-      decoration: const InputDecoration(labelText: 'الحالة'),
+      decoration: const InputDecoration(labelText: 'Status'),
       items: WorkflowStatus.values
           .map(
             (status) =>
@@ -216,10 +216,10 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
       borderRadius: BorderRadius.circular(12),
       onTap: _pickDate,
       child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'موعد النشر'),
+        decoration: const InputDecoration(labelText: 'Publish date'),
         child: Text(
           _scheduledDate == null
-              ? 'بدون موعد'
+              ? 'No date'
               : DateFormat('yyyy/MM/dd').format(_scheduledDate!),
         ),
       ),
@@ -228,7 +228,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
 
   Widget _clearDateButton() {
     return IconButton(
-      tooltip: 'حذف الموعد',
+      tooltip: 'Clear date',
       onPressed: () => setState(() => _scheduledDate = null),
       icon: const Icon(Icons.close),
     );

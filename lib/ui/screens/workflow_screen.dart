@@ -18,12 +18,12 @@ class WorkflowScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PageHeader(
-            title: 'سير عمل المهام',
-            subtitle: 'تابع المهام من التخطيط حتى النشر',
+            title: 'Workflow',
+            subtitle: 'Track tasks from planning to publishing',
             action: FilledButton.icon(
               onPressed: () => showTaskEditor(context, controller),
               icon: const Icon(Icons.add),
-              label: const Text('مهمة جديدة'),
+              label: const Text('Add Task'),
             ),
           ),
           const SizedBox(height: 22),

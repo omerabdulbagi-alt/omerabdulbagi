@@ -14,6 +14,8 @@ DatabaseFactory createDatabaseFactory() {
       desktop.sqfliteFfiInit();
       return desktop.databaseFactoryFfi;
     case TargetPlatform.fuchsia:
-      throw UnsupportedError('قاعدة البيانات غير مدعومة على هذه المنصة.');
+      throw UnsupportedError(
+        'Local storage is not supported on this platform.',
+      );
   }
 }

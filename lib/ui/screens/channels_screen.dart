@@ -16,8 +16,8 @@ class ChannelsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const PageHeader(
-            title: 'القنوات',
-            subtitle: 'القنوات المستخدمة في خطة المحتوى',
+            title: 'Channels',
+            subtitle: 'Your content channels',
           ),
           const SizedBox(height: 22),
           Expanded(
@@ -57,7 +57,7 @@ class ChannelsScreen extends StatelessWidget {
                         ),
                         const Spacer(),
                         Text(channel.platform),
-                        Text('$count قطعة محتوى'),
+                        Text('$count content items'),
                       ],
                     ),
                   ),

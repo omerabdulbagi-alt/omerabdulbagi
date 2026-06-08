@@ -16,7 +16,7 @@ class LocalDatabase {
     _database = await _databaseFactory.openDatabase(
       p.join(basePath, 'my_content_manager.db'),
       options: OpenDatabaseOptions(
-        version: 4,
+        version: 5,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE channels (
@@ -57,6 +57,9 @@ class LocalDatabase {
           if (oldVersion < 4) {
             await db.delete('daily_tasks');
           }
+          if (oldVersion < 5) {
+            await _upgradeToEnglishChannelsAndTaskState(db);
+          }
         },
       ),
     );
@@ -65,11 +68,12 @@ class LocalDatabase {
 
   Future<void> _seedChannels(Database db) async {
     final channels = [
-      ['زولي عربي', 'YouTube', 0xFFFF5252],
+      ['Zooli Arabic', 'YouTube', 0xFFFF5252],
       ['Zooli English', 'YouTube', 0xFF42A5F5],
-      ['القرآن والمديح', 'YouTube', 0xFF66BB6A],
-      ['بلد 360', 'Facebook', 0xFF5C6BC0],
-      ['زولي عربي', 'TikTok', 0xFFAB47BC],
+      ['Zooli Arabic TikTok', 'TikTok', 0xFFAB47BC],
+      ['Balad360', 'Facebook', 0xFF5C6BC0],
+      ['Quran', 'YouTube', 0xFF66BB6A],
+      ['Madih', 'YouTube', 0xFFFFB74D],
     ];
     for (final channel in channels) {
       await db.insert('channels', {
@@ -100,10 +104,86 @@ class LocalDatabase {
         priority TEXT NOT NULL,
         status TEXT NOT NULL,
         notes TEXT NOT NULL DEFAULT '',
+        completed INTEGER NOT NULL DEFAULT 0,
+        reminder_at TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY(channel_id) REFERENCES channels(id)
       )
     ''');
+  }
+
+  Future<void> _upgradeToEnglishChannelsAndTaskState(Database db) async {
+    await db.execute(
+      "ALTER TABLE daily_tasks ADD COLUMN completed INTEGER NOT NULL DEFAULT 0",
+    );
+    await db.execute('ALTER TABLE daily_tasks ADD COLUMN reminder_at TEXT');
+
+    await db.update('channels', {
+      'name': 'Zooli Arabic',
+    }, where: "name = 'زولي عربي' AND platform = 'YouTube'");
+    await db.update('channels', {
+      'name': 'Zooli Arabic TikTok',
+    }, where: "name = 'زولي عربي' AND platform = 'TikTok'");
+    await db.update('channels', {
+      'name': 'Balad360',
+    }, where: "name = 'بلد 360'");
+    await db.execute("""
+      UPDATE content_items
+      SET type = CASE type
+        WHEN 'فيديو طويل' THEN 'Full Video'
+        WHEN 'فيديو قصير' THEN 'Short Video'
+        WHEN 'منشور' THEN 'Post'
+        WHEN 'بث مباشر' THEN 'Live Stream'
+        ELSE type
+      END
+    """);
+
+    final combined = await db.query(
+      'channels',
+      columns: ['id'],
+      where: "name = 'القرآن والمديح'",
+      limit: 1,
+    );
+    if (combined.isNotEmpty) {
+      final quranId = combined.first['id'] as int;
+      await db.update(
+        'channels',
+        {'name': 'Quran', 'color_value': 0xFF66BB6A},
+        where: 'id = ?',
+        whereArgs: [quranId],
+      );
+      final madihId = await db.insert('channels', {
+        'name': 'Madih',
+        'platform': 'YouTube',
+        'color_value': 0xFFFFB74D,
+      });
+      await db.update(
+        'content_items',
+        {'channel_id': madihId},
+        where:
+            "channel_id = ? AND (title LIKE '%مديح%' OR description LIKE '%مديح%')",
+        whereArgs: [quranId],
+      );
+      await db.update(
+        'daily_tasks',
+        {'channel_id': madihId},
+        where: "channel_id = ? AND task_type = 'madihContent'",
+        whereArgs: [quranId],
+      );
+    } else {
+      final madih = await db.query(
+        'channels',
+        where: "name = 'Madih'",
+        limit: 1,
+      );
+      if (madih.isEmpty) {
+        await db.insert('channels', {
+          'name': 'Madih',
+          'platform': 'YouTube',
+          'color_value': 0xFFFFB74D,
+        });
+      }
+    }
   }
 
   Future<void> _migrateToManualTasks(Database db) async {
@@ -169,8 +249,8 @@ class LocalDatabase {
     final samples = [
       _SampleContent(
         title: 'كيف تخطط لأسبوع منتج بدون ضغط؟',
-        channelId: channelId('زولي عربي', 'YouTube'),
-        type: 'فيديو طويل',
+        channelId: channelId('Zooli Arabic', 'YouTube'),
+        type: 'Full Video',
         status: 'editing',
         description:
             'حلقة عملية عن تقسيم الأهداف الأسبوعية وبناء روتين بسيط قابل للاستمرار.',
@@ -180,7 +260,7 @@ class LocalDatabase {
       _SampleContent(
         title: '5 Simple Habits for a More Focused Week',
         channelId: channelId('Zooli English', 'YouTube'),
-        type: 'فيديو طويل',
+        type: 'Full Video',
         status: 'scripting',
         description:
             'A practical video about planning, focus, and building sustainable weekly habits.',
@@ -189,8 +269,8 @@ class LocalDatabase {
       ),
       _SampleContent(
         title: 'ورد اليوم: سورة الملك مع معاني مختارة',
-        channelId: channelId('القرآن والمديح', 'YouTube'),
-        type: 'فيديو قصير',
+        channelId: channelId('Quran', 'YouTube'),
+        type: 'Short Video',
         status: 'ready',
         description:
             'تلاوة هادئة لآيات من سورة الملك مع معنى موجز يساعد على التدبر.',
@@ -199,8 +279,8 @@ class LocalDatabase {
       ),
       _SampleContent(
         title: 'مديح الصباح: الصلاة على النبي ﷺ',
-        channelId: channelId('القرآن والمديح', 'YouTube'),
-        type: 'فيديو قصير',
+        channelId: channelId('Madih', 'YouTube'),
+        type: 'Short Video',
         status: 'planned',
         description: 'مقطع صباحي يومي قصير من المديح والصلاة على النبي.',
         notes: 'اختيار خلفية هادئة وكتابة النص على الشاشة.',
@@ -208,8 +288,8 @@ class LocalDatabase {
       ),
       _SampleContent(
         title: 'تلاوة يوم الجمعة: سورة الكهف',
-        channelId: channelId('القرآن والمديح', 'YouTube'),
-        type: 'فيديو طويل',
+        channelId: channelId('Quran', 'YouTube'),
+        type: 'Full Video',
         status: 'published',
         description: 'تلاوة مختارة من سورة الكهف للنشر الأسبوعي.',
         notes: 'تم النشر ومراجعة الوصف.',
@@ -218,8 +298,8 @@ class LocalDatabase {
       ),
       _SampleContent(
         title: 'ثلاثة أماكن تستحق الزيارة في عطلة نهاية الأسبوع',
-        channelId: channelId('بلد 360', 'Facebook'),
-        type: 'منشور',
+        channelId: channelId('Balad360', 'Facebook'),
+        type: 'Post',
         status: 'planned',
         description:
             'منشور مصور يقترح ثلاث وجهات محلية مناسبة للعائلة والأصدقاء.',
@@ -228,8 +308,8 @@ class LocalDatabase {
       ),
       _SampleContent(
         title: 'صورة اليوم: حكاية من السوق القديم',
-        channelId: channelId('بلد 360', 'Facebook'),
-        type: 'منشور',
+        channelId: channelId('Balad360', 'Facebook'),
+        type: 'Post',
         status: 'published',
         description:
             'صورة أرشيفية مع قصة قصيرة عن تفاصيل الحياة في السوق القديم.',
@@ -239,8 +319,8 @@ class LocalDatabase {
       ),
       _SampleContent(
         title: 'نصيحة في 30 ثانية: ابدأ بأصعب مهمة',
-        channelId: channelId('زولي عربي', 'TikTok'),
-        type: 'فيديو قصير',
+        channelId: channelId('Zooli Arabic TikTok', 'TikTok'),
+        type: 'Short Video',
         status: 'recording',
         description:
             'مقطع سريع يشرح لماذا يساعد بدء اليوم بالمهمة الأصعب على الإنجاز.',

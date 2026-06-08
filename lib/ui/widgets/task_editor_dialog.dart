@@ -8,19 +8,30 @@ Future<void> showTaskEditor(
   BuildContext context,
   AppController controller, {
   ManualTask? task,
+  DateTime? initialDate,
 }) async {
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (context) => TaskEditorDialog(controller: controller, task: task),
+    builder: (context) => TaskEditorDialog(
+      controller: controller,
+      task: task,
+      initialDate: initialDate,
+    ),
   );
 }
 
 class TaskEditorDialog extends StatefulWidget {
-  const TaskEditorDialog({super.key, required this.controller, this.task});
+  const TaskEditorDialog({
+    super.key,
+    required this.controller,
+    this.task,
+    this.initialDate,
+  });
 
   final AppController controller;
   final ManualTask? task;
+  final DateTime? initialDate;
 
   @override
   State<TaskEditorDialog> createState() => _TaskEditorDialogState();
@@ -35,6 +46,8 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
   late DateTime _dueDate;
   late TaskPriority _priority;
   late TaskStatus _status;
+  late bool _completed;
+  DateTime? _reminderAt;
   bool _saving = false;
 
   @override
@@ -45,9 +58,11 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
     _notes = TextEditingController(text: task?.notes);
     _channelId = task?.channelId ?? widget.controller.channels.first.id;
     _type = task?.type ?? TaskType.fullYouTubeVideo;
-    _dueDate = task?.dueDate ?? DateTime.now();
+    _dueDate = task?.dueDate ?? widget.initialDate ?? DateTime.now();
     _priority = task?.priority ?? TaskPriority.medium;
     _status = task?.status ?? TaskStatus.planned;
+    _completed = task?.completed ?? false;
+    _reminderAt = task?.reminderAt;
   }
 
   @override
@@ -62,7 +77,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
     final isPhone = MediaQuery.sizeOf(context).width < 600;
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(widget.task == null ? 'إضافة مهمة جديدة' : 'تعديل المهمة'),
+      title: Text(widget.task == null ? 'Add Task' : 'Edit Task'),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 620),
         child: Form(
@@ -72,15 +87,15 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
               children: [
                 TextFormField(
                   controller: _title,
-                  decoration: const InputDecoration(labelText: 'عنوان المهمة'),
+                  decoration: const InputDecoration(labelText: 'Task title'),
                   validator: (value) => value == null || value.trim().isEmpty
-                      ? 'أدخل عنوان المهمة'
+                      ? 'Enter a task title'
                       : null,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
                   initialValue: _channelId,
-                  decoration: const InputDecoration(labelText: 'القناة'),
+                  decoration: const InputDecoration(labelText: 'Channel'),
                   items: widget.controller.channels
                       .map(
                         (channel) => DropdownMenuItem(
@@ -94,7 +109,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskType>(
                   initialValue: _type,
-                  decoration: const InputDecoration(labelText: 'نوع المهمة'),
+                  decoration: const InputDecoration(labelText: 'Task type'),
                   items: TaskType.values
                       .map(
                         (type) => DropdownMenuItem(
@@ -121,7 +136,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskStatus>(
                   initialValue: _status,
-                  decoration: const InputDecoration(labelText: 'الحالة'),
+                  decoration: const InputDecoration(labelText: 'Status'),
                   items: TaskStatus.values
                       .map(
                         (status) => DropdownMenuItem(
@@ -133,12 +148,50 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                   onChanged: (value) => setState(() => _status = value!),
                 ),
                 const SizedBox(height: 12),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Completed'),
+                  subtitle: const Text('Mark this task as finished'),
+                  value: _completed,
+                  onChanged: (value) => setState(() => _completed = value),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: _pickReminder,
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Reminder (optional)',
+                            prefixIcon: Icon(Icons.notifications_outlined),
+                          ),
+                          child: Text(
+                            _reminderAt == null
+                                ? 'No reminder'
+                                : DateFormat(
+                                    'MMM d, yyyy · h:mm a',
+                                  ).format(_reminderAt!),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_reminderAt != null)
+                      IconButton(
+                        tooltip: 'Clear reminder',
+                        onPressed: () => setState(() => _reminderAt = null),
+                        icon: const Icon(Icons.close),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _notes,
                   minLines: 3,
                   maxLines: 6,
                   decoration: const InputDecoration(
-                    labelText: 'ملاحظات',
+                    labelText: 'Notes',
                     alignLabelWithHint: true,
                   ),
                 ),
@@ -150,12 +203,12 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('إلغاء'),
+          child: const Text('Cancel'),
         ),
         FilledButton.icon(
           onPressed: _saving ? null : _save,
           icon: const Icon(Icons.save_outlined),
-          label: Text(_saving ? 'جارٍ الحفظ...' : 'حفظ'),
+          label: Text(_saving ? 'Saving...' : 'Save'),
         ),
       ],
     );
@@ -176,8 +229,8 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
       borderRadius: BorderRadius.circular(12),
       onTap: _pickDate,
       child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'تاريخ المهمة'),
-        child: Text(DateFormat('yyyy/MM/dd').format(_dueDate)),
+        decoration: const InputDecoration(labelText: 'Date'),
+        child: Text(DateFormat('MMM d, yyyy').format(_dueDate)),
       ),
     );
   }
@@ -185,7 +238,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
   Widget _priorityField() {
     return DropdownButtonFormField<TaskPriority>(
       initialValue: _priority,
-      decoration: const InputDecoration(labelText: 'الأولوية'),
+      decoration: const InputDecoration(labelText: 'Priority'),
       items: TaskPriority.values
           .map(
             (priority) =>
@@ -194,6 +247,31 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
           .toList(),
       onChanged: (value) => setState(() => _priority = value!),
     );
+  }
+
+  Future<void> _pickReminder() async {
+    final initial = _reminderAt ?? DateTime.now().add(const Duration(hours: 1));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime(2100),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null) return;
+    setState(() {
+      _reminderAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    });
   }
 
   Future<void> _save() async {
@@ -209,6 +287,8 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
         priority: _priority,
         status: _status,
         notes: _notes.text.trim(),
+        completed: _completed,
+        reminderAt: _reminderAt,
       ),
     );
     if (mounted) Navigator.pop(context);

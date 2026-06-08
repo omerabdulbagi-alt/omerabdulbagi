@@ -1,11 +1,11 @@
 enum WorkflowStatus {
-  idea('فكرة'),
-  planned('مخطط'),
-  scripting('كتابة'),
-  recording('تسجيل'),
-  editing('مونتاج'),
-  ready('جاهز'),
-  published('منشور');
+  idea('Idea'),
+  planned('Planned'),
+  scripting('Scripting'),
+  recording('Recording'),
+  editing('Editing'),
+  ready('Ready'),
+  published('Published');
 
   const WorkflowStatus(this.label);
   final String label;
@@ -24,13 +24,7 @@ class Channel {
   final String platform;
   final int colorValue;
 
-  String get taskLabel {
-    if (platform == 'TikTok') return 'Zooli Arabic TikTok';
-    if (platform == 'Facebook') return 'Balad360';
-    if (name == 'Zooli English') return 'Zooli English';
-    if (name == 'القرآن والمديح') return 'Quran and Madih';
-    return 'Zooli Arabic';
-  }
+  String get taskLabel => name;
 
   factory Channel.fromMap(Map<String, Object?> map) => Channel(
     id: map['id'] as int,
@@ -104,20 +98,20 @@ enum TaskType {
 }
 
 enum TaskPriority {
-  low('منخفضة'),
-  medium('متوسطة'),
-  high('عالية'),
-  urgent('عاجلة');
+  low('Low'),
+  medium('Medium'),
+  high('High'),
+  urgent('Urgent');
 
   const TaskPriority(this.label);
   final String label;
 }
 
 enum TaskStatus {
-  planned('مخطط'),
-  inProgress('قيد التنفيذ'),
-  ready('جاهز'),
-  published('منشور');
+  planned('Planned'),
+  inProgress('In Progress'),
+  ready('Ready'),
+  published('Published');
 
   const TaskStatus(this.label);
   final String label;
@@ -133,6 +127,8 @@ class ManualTask {
     required this.priority,
     required this.status,
     this.notes = '',
+    this.completed = false,
+    this.reminderAt,
   });
 
   final int? id;
@@ -143,6 +139,8 @@ class ManualTask {
   final TaskPriority priority;
   final TaskStatus status;
   final String notes;
+  final bool completed;
+  final DateTime? reminderAt;
 
   Map<String, Object?> toMap() => {
     'id': id,
@@ -153,8 +151,37 @@ class ManualTask {
     'priority': priority.name,
     'status': status.name,
     'notes': notes,
+    'completed': completed ? 1 : 0,
+    'reminder_at': reminderAt?.toIso8601String(),
     'created_at': DateTime.now().toIso8601String(),
   };
+
+  ManualTask copyWith({
+    int? id,
+    String? title,
+    int? channelId,
+    TaskType? type,
+    DateTime? dueDate,
+    TaskPriority? priority,
+    TaskStatus? status,
+    String? notes,
+    bool? completed,
+    DateTime? reminderAt,
+    bool clearReminder = false,
+  }) {
+    return ManualTask(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      channelId: channelId ?? this.channelId,
+      type: type ?? this.type,
+      dueDate: dueDate ?? this.dueDate,
+      priority: priority ?? this.priority,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+      completed: completed ?? this.completed,
+      reminderAt: clearReminder ? null : reminderAt ?? this.reminderAt,
+    );
+  }
 
   factory ManualTask.fromMap(Map<String, Object?> map) => ManualTask(
     id: map['id'] as int,
@@ -165,5 +192,9 @@ class ManualTask {
     priority: TaskPriority.values.byName(map['priority'] as String),
     status: TaskStatus.values.byName(map['status'] as String),
     notes: map['notes'] as String? ?? '',
+    completed: (map['completed'] as int? ?? 0) == 1,
+    reminderAt: map['reminder_at'] == null
+        ? null
+        : DateTime.parse(map['reminder_at'] as String),
   );
 }

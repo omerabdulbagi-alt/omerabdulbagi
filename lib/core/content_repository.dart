@@ -9,7 +9,17 @@ class ContentRepository {
     final db = await _localDatabase.database;
     return (await db.query(
       'channels',
-      orderBy: 'id',
+      orderBy: '''
+        CASE name
+          WHEN 'Zooli Arabic' THEN 1
+          WHEN 'Zooli English' THEN 2
+          WHEN 'Zooli Arabic TikTok' THEN 3
+          WHEN 'Balad360' THEN 4
+          WHEN 'Quran' THEN 5
+          WHEN 'Madih' THEN 6
+          ELSE 99
+        END
+      ''',
     )).map(Channel.fromMap).toList();
   }
 
@@ -49,11 +59,11 @@ class ContentRepository {
     )).map(ManualTask.fromMap).toList();
   }
 
-  Future<void> saveTask(ManualTask task) async {
+  Future<int> saveTask(ManualTask task) async {
     final db = await _localDatabase.database;
     final values = task.toMap()..remove('id');
     if (task.id == null) {
-      await db.insert('daily_tasks', values);
+      return db.insert('daily_tasks', values);
     } else {
       await db.update(
         'daily_tasks',
@@ -61,6 +71,7 @@ class ContentRepository {
         where: 'id = ?',
         whereArgs: [task.id],
       );
+      return task.id!;
     }
   }
 

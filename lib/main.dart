@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/app_controller.dart';
 import 'core/content_repository.dart';
 import 'core/local_database.dart';
+import 'core/notification_service.dart';
 import 'ui/app_theme.dart';
 import 'ui/main_shell.dart';
 
@@ -60,7 +61,10 @@ class _AppBootstrapState extends State<AppBootstrap> {
     });
 
     try {
-      final controller = AppController(ContentRepository(LocalDatabase()));
+      final controller = AppController(
+        ContentRepository(LocalDatabase()),
+        NotificationService(),
+      );
       await controller.initialize();
       if (mounted) setState(() => _controller = controller);
     } catch (error, stackTrace) {
@@ -79,19 +83,16 @@ class _AppBootstrapState extends State<AppBootstrap> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'مدير المحتوى',
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar')],
+      title: 'My Tasks',
+      locale: const Locale('en'),
+      supportedLocales: const [Locale('en')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: AppTheme.dark,
-      home: Directionality(
-        textDirection: TextDirection.rtl,
-        child: _buildHome(),
-      ),
+      home: _buildHome(),
     );
   }
 
@@ -111,7 +112,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('جارٍ تشغيل مدير المحتوى...'),
+              Text('Starting My Tasks...'),
             ],
           ),
         ),
@@ -155,12 +156,12 @@ class StartupErrorScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'تعذر تشغيل التطبيق',
+                        'Unable to start the app',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        'حدث خطأ أثناء تهيئة قاعدة البيانات المحلية.',
+                        'An error occurred while initializing local storage.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -172,7 +173,7 @@ class StartupErrorScreen extends StatelessWidget {
                       if (kDebugMode && stackTrace != null) ...[
                         const SizedBox(height: 12),
                         ExpansionTile(
-                          title: const Text('تفاصيل الخطأ'),
+                          title: const Text('Error details'),
                           children: [
                             SelectableText(
                               stackTrace.toString(),
@@ -186,7 +187,7 @@ class StartupErrorScreen extends StatelessWidget {
                       FilledButton.icon(
                         onPressed: onRetry,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('إعادة المحاولة'),
+                        label: const Text('Retry'),
                       ),
                     ],
                   ),

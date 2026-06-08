@@ -59,10 +59,12 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 600;
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Text(widget.task == null ? 'إضافة مهمة جديدة' : 'تعديل المهمة'),
-      content: SizedBox(
-        width: 620,
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -104,43 +106,18 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                   onChanged: (value) => setState(() => _type = value!),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: _pickDate,
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'تاريخ المهمة',
-                          ),
-                          child: Text(
-                            DateFormat('yyyy/MM/dd').format(_dueDate),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<TaskPriority>(
-                        initialValue: _priority,
-                        decoration: const InputDecoration(
-                          labelText: 'الأولوية',
-                        ),
-                        items: TaskPriority.values
-                            .map(
-                              (priority) => DropdownMenuItem(
-                                value: priority,
-                                child: Text(priority.label),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) =>
-                            setState(() => _priority = value!),
-                      ),
-                    ),
-                  ],
-                ),
+                if (isPhone) ...[
+                  _dateField(),
+                  const SizedBox(height: 12),
+                  _priorityField(),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(child: _dateField()),
+                      const SizedBox(width: 12),
+                      Expanded(child: _priorityField()),
+                    ],
+                  ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskStatus>(
                   initialValue: _status,
@@ -192,6 +169,31 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
       lastDate: DateTime(2100),
     );
     if (date != null) setState(() => _dueDate = date);
+  }
+
+  Widget _dateField() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: _pickDate,
+      child: InputDecorator(
+        decoration: const InputDecoration(labelText: 'تاريخ المهمة'),
+        child: Text(DateFormat('yyyy/MM/dd').format(_dueDate)),
+      ),
+    );
+  }
+
+  Widget _priorityField() {
+    return DropdownButtonFormField<TaskPriority>(
+      initialValue: _priority,
+      decoration: const InputDecoration(labelText: 'الأولوية'),
+      items: TaskPriority.values
+          .map(
+            (priority) =>
+                DropdownMenuItem(value: priority, child: Text(priority.label)),
+          )
+          .toList(),
+      onChanged: (value) => setState(() => _priority = value!),
+    );
   }
 
   Future<void> _save() async {

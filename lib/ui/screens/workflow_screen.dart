@@ -11,8 +11,9 @@ class WorkflowScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 700;
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isPhone ? 16 : 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -38,7 +39,7 @@ class WorkflowScreen extends StatelessWidget {
                     .where((task) => task.status == status)
                     .toList();
                 return SizedBox(
-                  width: 290,
+                  width: isPhone ? 260 : 290,
                   child: Card(
                     child: Padding(
                       padding: const EdgeInsets.all(14),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -19,12 +21,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 700;
     final firstWeekday = _month.weekday % 7;
     final daysInMonth = DateUtils.getDaysInMonth(_month.year, _month.month);
     final cellCount = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7;
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isPhone ? 12 : 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -54,41 +57,66 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          const Row(
-            children: [
-              _Weekday('الأحد'),
-              _Weekday('الاثنين'),
-              _Weekday('الثلاثاء'),
-              _Weekday('الأربعاء'),
-              _Weekday('الخميس'),
-              _Weekday('الجمعة'),
-              _Weekday('السبت'),
-            ],
-          ),
-          const SizedBox(height: 8),
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                childAspectRatio: 1.1,
-                crossAxisSpacing: 6,
-                mainAxisSpacing: 6,
-              ),
-              itemCount: cellCount,
-              itemBuilder: (context, index) {
-                final day = index - firstWeekday + 1;
-                if (day < 1 || day > daysInMonth) {
-                  return const SizedBox.shrink();
-                }
-                final date = DateTime(_month.year, _month.month, day);
-                final tasks = widget.controller.tasks
-                    .where((task) => _sameDay(task.dueDate, date))
-                    .toList();
-                return _CalendarDay(
-                  date: date,
-                  tasks: tasks,
-                  onOpen: (task) =>
-                      showTaskEditor(context, widget.controller, task: task),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final calendarWidth = math.max(constraints.maxWidth, 760.0);
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: calendarWidth,
+                    child: Column(
+                      children: [
+                        const Row(
+                          children: [
+                            _Weekday('الأحد'),
+                            _Weekday('الاثنين'),
+                            _Weekday('الثلاثاء'),
+                            _Weekday('الأربعاء'),
+                            _Weekday('الخميس'),
+                            _Weekday('الجمعة'),
+                            _Weekday('السبت'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: GridView.builder(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 7,
+                                  childAspectRatio: 1.1,
+                                  crossAxisSpacing: 6,
+                                  mainAxisSpacing: 6,
+                                ),
+                            itemCount: cellCount,
+                            itemBuilder: (context, index) {
+                              final day = index - firstWeekday + 1;
+                              if (day < 1 || day > daysInMonth) {
+                                return const SizedBox.shrink();
+                              }
+                              final date = DateTime(
+                                _month.year,
+                                _month.month,
+                                day,
+                              );
+                              final tasks = widget.controller.tasks
+                                  .where((task) => _sameDay(task.dueDate, date))
+                                  .toList();
+                              return _CalendarDay(
+                                date: date,
+                                tasks: tasks,
+                                onOpen: (task) => showTaskEditor(
+                                  context,
+                                  widget.controller,
+                                  task: task,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),

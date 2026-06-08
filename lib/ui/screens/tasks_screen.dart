@@ -19,12 +19,13 @@ class _TasksScreenState extends State<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 700;
     final tasks = widget.controller.tasks
         .where((task) => _status == null || task.status == _status)
         .toList();
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isPhone ? 16 : 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -85,32 +86,60 @@ class _TasksScreenState extends State<TasksScreen> {
                           ),
                           title: Text(task.title),
                           subtitle: Text(
-                            '${channel.taskLabel} · ${task.type.label} · '
-                            '${task.status.label} · ${task.priority.label}',
+                            '${channel.taskLabel} · ${task.type.label}\n'
+                            '${task.status.label} · ${task.priority.label} · '
+                            '${DateFormat('yyyy/MM/dd').format(task.dueDate)}',
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                DateFormat('yyyy/MM/dd').format(task.dueDate),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                tooltip: 'تعديل',
-                                onPressed: () => showTaskEditor(
-                                  context,
-                                  widget.controller,
-                                  task: task,
+                          isThreeLine: true,
+                          trailing: isPhone
+                              ? PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      showTaskEditor(
+                                        context,
+                                        widget.controller,
+                                        task: task,
+                                      );
+                                    } else {
+                                      _confirmDelete(task);
+                                    }
+                                  },
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text('تعديل'),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('حذف'),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      DateFormat(
+                                        'yyyy/MM/dd',
+                                      ).format(task.dueDate),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      tooltip: 'تعديل',
+                                      onPressed: () => showTaskEditor(
+                                        context,
+                                        widget.controller,
+                                        task: task,
+                                      ),
+                                      icon: const Icon(Icons.edit_outlined),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'حذف',
+                                      onPressed: () => _confirmDelete(task),
+                                      icon: const Icon(Icons.delete_outline),
+                                    ),
+                                  ],
                                 ),
-                                icon: const Icon(Icons.edit_outlined),
-                              ),
-                              IconButton(
-                                tooltip: 'حذف',
-                                onPressed: () => _confirmDelete(task),
-                                icon: const Icon(Icons.delete_outline),
-                              ),
-                            ],
-                          ),
                           onTap: () => showTaskEditor(
                             context,
                             widget.controller,

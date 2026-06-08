@@ -14,23 +14,36 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(color: Theme.of(context).colorScheme.outline),
-              ),
-            ],
-          ),
+        Text(title, style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: TextStyle(color: Theme.of(context).colorScheme.outline),
         ),
-        ?action,
       ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520 && action != null) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              text,
+              const SizedBox(height: 14),
+              Align(alignment: Alignment.centerLeft, child: action),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: text),
+            ?action,
+          ],
+        );
+      },
     );
   }
 }

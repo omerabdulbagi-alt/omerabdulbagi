@@ -66,10 +66,12 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 600;
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Text(widget.item == null ? 'إضافة محتوى جديد' : 'تعديل المحتوى'),
-      content: SizedBox(
-        width: 680,
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -83,89 +85,37 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
                       : null,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _channelId,
-                        decoration: const InputDecoration(labelText: 'القناة'),
-                        items: widget.controller.channels
-                            .map(
-                              (channel) => DropdownMenuItem(
-                                value: channel.id,
-                                child: Text(
-                                  '${channel.name} · ${channel.platform}',
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) =>
-                            setState(() => _channelId = value!),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _type,
-                        decoration: const InputDecoration(labelText: 'النوع'),
-                        items: _types
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) => setState(() => _type = value!),
-                      ),
-                    ),
-                  ],
-                ),
+                if (isPhone) ...[
+                  _channelField(),
+                  const SizedBox(height: 12),
+                  _typeField(),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(child: _channelField()),
+                      const SizedBox(width: 12),
+                      Expanded(child: _typeField()),
+                    ],
+                  ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<WorkflowStatus>(
-                        initialValue: _status,
-                        decoration: const InputDecoration(labelText: 'الحالة'),
-                        items: WorkflowStatus.values
-                            .map(
-                              (status) => DropdownMenuItem(
-                                value: status,
-                                child: Text(status.label),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) => setState(() => _status = value!),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: _pickDate,
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'موعد النشر',
-                          ),
-                          child: Text(
-                            _scheduledDate == null
-                                ? 'بدون موعد'
-                                : DateFormat(
-                                    'yyyy/MM/dd',
-                                  ).format(_scheduledDate!),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_scheduledDate != null)
-                      IconButton(
-                        tooltip: 'حذف الموعد',
-                        onPressed: () => setState(() => _scheduledDate = null),
-                        icon: const Icon(Icons.close),
-                      ),
-                  ],
-                ),
+                if (isPhone) ...[
+                  _statusField(),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _dateField()),
+                      if (_scheduledDate != null) _clearDateButton(),
+                    ],
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(child: _statusField()),
+                      const SizedBox(width: 12),
+                      Expanded(child: _dateField()),
+                      if (_scheduledDate != null) _clearDateButton(),
+                    ],
+                  ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _description,
@@ -218,6 +168,70 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
       lastDate: DateTime(2100),
     );
     if (result != null) setState(() => _scheduledDate = result);
+  }
+
+  Widget _channelField() {
+    return DropdownButtonFormField<int>(
+      initialValue: _channelId,
+      decoration: const InputDecoration(labelText: 'القناة'),
+      items: widget.controller.channels
+          .map(
+            (channel) => DropdownMenuItem(
+              value: channel.id,
+              child: Text('${channel.name} · ${channel.platform}'),
+            ),
+          )
+          .toList(),
+      onChanged: (value) => setState(() => _channelId = value!),
+    );
+  }
+
+  Widget _typeField() {
+    return DropdownButtonFormField<String>(
+      initialValue: _type,
+      decoration: const InputDecoration(labelText: 'النوع'),
+      items: _types
+          .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+          .toList(),
+      onChanged: (value) => setState(() => _type = value!),
+    );
+  }
+
+  Widget _statusField() {
+    return DropdownButtonFormField<WorkflowStatus>(
+      initialValue: _status,
+      decoration: const InputDecoration(labelText: 'الحالة'),
+      items: WorkflowStatus.values
+          .map(
+            (status) =>
+                DropdownMenuItem(value: status, child: Text(status.label)),
+          )
+          .toList(),
+      onChanged: (value) => setState(() => _status = value!),
+    );
+  }
+
+  Widget _dateField() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: _pickDate,
+      child: InputDecorator(
+        decoration: const InputDecoration(labelText: 'موعد النشر'),
+        child: Text(
+          _scheduledDate == null
+              ? 'بدون موعد'
+              : DateFormat('yyyy/MM/dd').format(_scheduledDate!),
+        ),
+      ),
+    );
+  }
+
+  Widget _clearDateButton() {
+    return IconButton(
+      tooltip: 'حذف الموعد',
+      onPressed: () => setState(() => _scheduledDate = null),
+      icon: const Icon(Icons.close),
+    );
   }
 
   Future<void> _save() async {

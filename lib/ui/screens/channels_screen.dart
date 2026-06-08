@@ -9,8 +9,9 @@ class ChannelsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 700;
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isPhone ? 16 : 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -18,6 +18,7 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 700;
     final today = DateUtils.dateOnly(DateTime.now());
     final todayTasks = controller.tasks
         .where((task) => DateUtils.isSameDay(task.dueDate, today))
@@ -32,7 +33,7 @@ class DashboardScreen extends StatelessWidget {
         .toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isPhone ? 16 : 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -51,22 +52,26 @@ class DashboardScreen extends StatelessWidget {
             runSpacing: 16,
             children: [
               _StatCard(
+                compact: isPhone,
                 label: 'كل المهام',
                 value: '${controller.tasks.length}',
                 icon: Icons.task_alt,
               ),
               _StatCard(
+                compact: isPhone,
                 label: 'قيد التنفيذ',
                 value:
                     '${controller.tasks.where((task) => task.status == TaskStatus.inProgress).length}',
                 icon: Icons.pending_actions,
               ),
               _StatCard(
+                compact: isPhone,
                 label: 'مهام اليوم',
                 value: '${todayTasks.length}',
                 icon: Icons.today,
               ),
               _StatCard(
+                compact: isPhone,
                 label: 'جاهزة',
                 value:
                     '${controller.tasks.where((task) => task.status == TaskStatus.ready).length}',
@@ -120,11 +125,13 @@ class DashboardScreen extends StatelessWidget {
 
 class _StatCard extends StatelessWidget {
   const _StatCard({
+    required this.compact,
     required this.label,
     required this.value,
     required this.icon,
   });
 
+  final bool compact;
   final String label;
   final String value;
   final IconData icon;
@@ -132,7 +139,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 210,
+      width: compact ? 160 : 210,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(20),

@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'core/app_controller.dart';
 import 'core/content_repository.dart';
@@ -8,20 +11,69 @@ import 'core/local_database.dart';
 import 'ui/app_theme.dart';
 import 'ui/main_shell.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
-
-  final controller = AppController(ContentRepository(LocalDatabase()));
-  await controller.initialize();
-  runApp(MyContentManagerApp(controller: controller));
+void main() {
+  runZonedGuarded(
+    () {
+      WidgetsFlutterBinding.ensureInitialized();
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        debugPrint('Flutter error: ${details.exceptionAsString()}');
+        debugPrintStack(stackTrace: details.stack);
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        debugPrint('Uncaught platform error: $error');
+        debugPrintStack(stackTrace: stack);
+        return true;
+      };
+      runApp(const AppBootstrap());
+    },
+    (error, stack) {
+      debugPrint('Uncaught startup error: $error');
+      debugPrintStack(stackTrace: stack);
+    },
+  );
 }
 
-class MyContentManagerApp extends StatelessWidget {
-  const MyContentManagerApp({super.key, required this.controller});
+class AppBootstrap extends StatefulWidget {
+  const AppBootstrap({super.key});
 
-  final AppController controller;
+  @override
+  State<AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends State<AppBootstrap> {
+  AppController? _controller;
+  Object? _error;
+  StackTrace? _stackTrace;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    setState(() {
+      _controller = null;
+      _error = null;
+      _stackTrace = null;
+    });
+
+    try {
+      final controller = AppController(ContentRepository(LocalDatabase()));
+      await controller.initialize();
+      if (mounted) setState(() => _controller = controller);
+    } catch (error, stackTrace) {
+      debugPrint('App initialization failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _stackTrace = stackTrace;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +90,111 @@ class MyContentManagerApp extends StatelessWidget {
       theme: AppTheme.dark,
       home: Directionality(
         textDirection: TextDirection.rtl,
-        child: MainShell(controller: controller),
+        child: _buildHome(),
+      ),
+    );
+  }
+
+  Widget _buildHome() {
+    if (_error != null) {
+      return StartupErrorScreen(
+        error: _error!,
+        stackTrace: _stackTrace,
+        onRetry: _initialize,
+      );
+    }
+    if (_controller == null) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('جارٍ تشغيل مدير المحتوى...'),
+            ],
+          ),
+        ),
+      );
+    }
+    return MainShell(controller: _controller!);
+  }
+}
+
+class StartupErrorScreen extends StatelessWidget {
+  const StartupErrorScreen({
+    super.key,
+    required this.error,
+    required this.onRetry,
+    this.stackTrace,
+  });
+
+  final Object error;
+  final StackTrace? stackTrace;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 56,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'تعذر تشغيل التطبيق',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'حدث خطأ أثناء تهيئة قاعدة البيانات المحلية.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      SelectableText(
+                        error.toString(),
+                        textDirection: TextDirection.ltr,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (kDebugMode && stackTrace != null) ...[
+                        const SizedBox(height: 12),
+                        ExpansionTile(
+                          title: const Text('تفاصيل الخطأ'),
+                          children: [
+                            SelectableText(
+                              stackTrace.toString(),
+                              textDirection: TextDirection.ltr,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      FilledButton.icon(
+                        onPressed: onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('إعادة المحاولة'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

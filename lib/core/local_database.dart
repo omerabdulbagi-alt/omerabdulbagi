@@ -1,13 +1,19 @@
 import 'package:path/path.dart' as p;
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common/sqlite_api.dart';
+
+import 'database_factory.dart';
 
 class LocalDatabase {
+  LocalDatabase({DatabaseFactory? factory})
+    : _databaseFactory = factory ?? createDatabaseFactory();
+
+  final DatabaseFactory _databaseFactory;
   Database? _database;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    final basePath = await databaseFactory.getDatabasesPath();
-    _database = await databaseFactory.openDatabase(
+    final basePath = await _databaseFactory.getDatabasesPath();
+    _database = await _databaseFactory.openDatabase(
       p.join(basePath, 'my_content_manager.db'),
       options: OpenDatabaseOptions(
         version: 4,

@@ -20,6 +20,7 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 700;
     final items = widget.controller.items.where((item) {
       final matchesText =
           item.title.toLowerCase().contains(_query.toLowerCase()) ||
@@ -28,7 +29,7 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
     }).toList();
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isPhone ? 16 : 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -42,21 +43,18 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
             ),
           ),
           const SizedBox(height: 22),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
+          if (isPhone)
+            Column(
+              children: [
+                TextField(
                   onChanged: (value) => setState(() => _query = value),
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.search),
                     hintText: 'ابحث بالعنوان أو الوصف',
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                width: 180,
-                child: DropdownButtonFormField<WorkflowStatus?>(
+                const SizedBox(height: 12),
+                DropdownButtonFormField<WorkflowStatus?>(
                   initialValue: _status,
                   decoration: const InputDecoration(labelText: 'الحالة'),
                   items: [
@@ -70,9 +68,40 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
                   ],
                   onChanged: (value) => setState(() => _status = value),
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: (value) => setState(() => _query = value),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'ابحث بالعنوان أو الوصف',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 180,
+                  child: DropdownButtonFormField<WorkflowStatus?>(
+                    initialValue: _status,
+                    decoration: const InputDecoration(labelText: 'الحالة'),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('الكل')),
+                      ...WorkflowStatus.values.map(
+                        (status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(status.label),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) => setState(() => _status = value),
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 16),
           Expanded(
             child: Card(
@@ -99,32 +128,56 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
                           subtitle: Text(
                             '${channel.name} · ${item.type} · ${item.status.label}',
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (item.scheduledDate != null)
-                                Text(
-                                  DateFormat(
-                                    'yyyy/MM/dd',
-                                  ).format(item.scheduledDate!),
+                          trailing: isPhone
+                              ? PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      showContentEditor(
+                                        context,
+                                        widget.controller,
+                                        item: item,
+                                      );
+                                    } else {
+                                      _confirmDelete(item);
+                                    }
+                                  },
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text('تعديل'),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('حذف'),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (item.scheduledDate != null)
+                                      Text(
+                                        DateFormat(
+                                          'yyyy/MM/dd',
+                                        ).format(item.scheduledDate!),
+                                      ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      tooltip: 'تعديل',
+                                      onPressed: () => showContentEditor(
+                                        context,
+                                        widget.controller,
+                                        item: item,
+                                      ),
+                                      icon: const Icon(Icons.edit_outlined),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'حذف',
+                                      onPressed: () => _confirmDelete(item),
+                                      icon: const Icon(Icons.delete_outline),
+                                    ),
+                                  ],
                                 ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                tooltip: 'تعديل',
-                                onPressed: () => showContentEditor(
-                                  context,
-                                  widget.controller,
-                                  item: item,
-                                ),
-                                icon: const Icon(Icons.edit_outlined),
-                              ),
-                              IconButton(
-                                tooltip: 'حذف',
-                                onPressed: () => _confirmDelete(item),
-                                icon: const Icon(Icons.delete_outline),
-                              ),
-                            ],
-                          ),
                           onTap: () => showContentEditor(
                             context,
                             widget.controller,

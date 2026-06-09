@@ -4,6 +4,7 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../widgets/page_header.dart';
 import '../widgets/task_editor_dialog.dart';
+import '../app_localizations.dart';
 
 class WorkflowScreen extends StatelessWidget {
   const WorkflowScreen({super.key, required this.controller});
@@ -18,12 +19,15 @@ class WorkflowScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PageHeader(
-            title: 'Workflow',
-            subtitle: 'Track tasks from planning to publishing',
+            title: context.tr('Workflow', 'سير العمل'),
+            subtitle: context.tr(
+              'Track tasks from planning to publishing',
+              'تابع المهام من التخطيط حتى النشر',
+            ),
             action: FilledButton.icon(
               onPressed: () => showTaskEditor(context, controller),
               icon: const Icon(Icons.add),
-              label: const Text('Add Task'),
+              label: Text(context.tr('Add Task', 'إضافة مهمة')),
             ),
           ),
           const SizedBox(height: 22),

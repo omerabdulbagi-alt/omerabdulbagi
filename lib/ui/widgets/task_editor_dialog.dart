@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
+import '../app_localizations.dart';
+import 'channel_editor_dialog.dart';
 
 Future<void> showTaskEditor(
   BuildContext context,
@@ -13,6 +15,10 @@ Future<void> showTaskEditor(
   TaskType? initialType,
   String? initialTitle,
 }) async {
+  if (controller.activeChannels.isEmpty) {
+    await showChannelEditor(context, controller);
+    if (controller.activeChannels.isEmpty || !context.mounted) return;
+  }
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -60,6 +66,10 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
   late TaskStatus _status;
   late bool _completed;
   DateTime? _reminderAt;
+  late RecurrenceType _recurrenceType;
+  late int _recurrenceInterval;
+  late Set<int> _recurrenceWeekdays;
+  int? _recurrenceMonthDay;
   bool _saving = false;
 
   @override
@@ -78,6 +88,10 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
     _status = task?.status ?? TaskStatus.planned;
     _completed = task?.completed ?? false;
     _reminderAt = task?.reminderAt;
+    _recurrenceType = task?.recurrenceType ?? RecurrenceType.none;
+    _recurrenceInterval = task?.recurrenceInterval ?? 1;
+    _recurrenceWeekdays = (task?.recurrenceWeekdays ?? const <int>[]).toSet();
+    _recurrenceMonthDay = task?.recurrenceMonthDay;
   }
 
   @override
@@ -92,7 +106,11 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
     final isPhone = MediaQuery.sizeOf(context).width < 600;
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(widget.task == null ? 'Add Task' : 'Edit Task'),
+      title: Text(
+        widget.task == null
+            ? context.tr('Add Task', 'إضافة مهمة')
+            : context.tr('Edit Task', 'تعديل المهمة'),
+      ),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 620),
         child: Form(
@@ -102,7 +120,9 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
               children: [
                 TextFormField(
                   controller: _title,
-                  decoration: const InputDecoration(labelText: 'Task title'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Task title', 'عنوان المهمة'),
+                  ),
                   validator: (value) => value == null || value.trim().isEmpty
                       ? 'Enter a task title'
                       : null,
@@ -110,7 +130,9 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
                   initialValue: _channelId,
-                  decoration: const InputDecoration(labelText: 'Channel'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Channel', 'القناة'),
+                  ),
                   items: widget.controller.channels
                       .where(
                         (channel) =>
@@ -128,7 +150,9 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskType>(
                   initialValue: _type,
-                  decoration: const InputDecoration(labelText: 'Task type'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Task type', 'نوع المهمة'),
+                  ),
                   items: TaskType.values
                       .map(
                         (type) => DropdownMenuItem(
@@ -155,7 +179,9 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskStatus>(
                   initialValue: _status,
-                  decoration: const InputDecoration(labelText: 'Status'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Status', 'الحالة'),
+                  ),
                   items: TaskStatus.values
                       .map(
                         (status) => DropdownMenuItem(
@@ -167,10 +193,94 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                   onChanged: (value) => setState(() => _status = value!),
                 ),
                 const SizedBox(height: 12),
+                DropdownButtonFormField<RecurrenceType>(
+                  initialValue: _recurrenceType,
+                  decoration: InputDecoration(
+                    labelText: context.tr('Repeat Task', 'تكرار المهمة'),
+                  ),
+                  items: RecurrenceType.values
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(_recurrenceLabel(context, type)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: widget.task == null
+                      ? (value) => setState(() => _recurrenceType = value!)
+                      : null,
+                ),
+                if (_recurrenceType == RecurrenceType.custom) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: _recurrenceInterval,
+                    decoration: InputDecoration(
+                      labelText: context.tr('Repeat every', 'التكرار كل'),
+                    ),
+                    items: List.generate(
+                      30,
+                      (index) => DropdownMenuItem(
+                        value: index + 1,
+                        child: Text('${index + 1}'),
+                      ),
+                    ),
+                    onChanged: (value) =>
+                        setState(() => _recurrenceInterval = value!),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      context.tr(
+                        'Days of week (leave empty for every N days)',
+                        'أيام الأسبوع (اتركها فارغة للتكرار كل عدد من الأيام)',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    children: List.generate(7, (index) {
+                      final weekday = index + 1;
+                      final labels = context.isArabic
+                          ? const ['ن', 'ث', 'ر', 'خ', 'ج', 'س', 'ح']
+                          : const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                      return FilterChip(
+                        label: Text(labels[index]),
+                        selected: _recurrenceWeekdays.contains(weekday),
+                        onSelected: (selected) => setState(() {
+                          selected
+                              ? _recurrenceWeekdays.add(weekday)
+                              : _recurrenceWeekdays.remove(weekday);
+                        }),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      context.tr(
+                        'Use first day of each month',
+                        'استخدم اليوم الأول من كل شهر',
+                      ),
+                    ),
+                    value: _recurrenceMonthDay == 1,
+                    onChanged: (value) => setState(
+                      () => _recurrenceMonthDay = value == true ? 1 : null,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Completed'),
-                  subtitle: const Text('Mark this task as finished'),
+                  title: Text(context.tr('Completed', 'مكتملة')),
+                  subtitle: Text(
+                    context.tr(
+                      'Mark this task as finished',
+                      'تحديد المهمة كمكتملة',
+                    ),
+                  ),
                   value: _completed,
                   onChanged: (value) => setState(() => _completed = value),
                 ),
@@ -182,13 +292,18 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                         borderRadius: BorderRadius.circular(12),
                         onTap: _pickReminder,
                         child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Reminder (optional)',
-                            prefixIcon: Icon(Icons.notifications_outlined),
+                          decoration: InputDecoration(
+                            labelText: context.tr(
+                              'Reminder (optional)',
+                              'التذكير (اختياري)',
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.notifications_outlined,
+                            ),
                           ),
                           child: Text(
                             _reminderAt == null
-                                ? 'No reminder'
+                                ? context.tr('No reminder', 'بدون تذكير')
                                 : DateFormat(
                                     'MMM d, yyyy · h:mm a',
                                   ).format(_reminderAt!),
@@ -198,7 +313,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                     ),
                     if (_reminderAt != null)
                       IconButton(
-                        tooltip: 'Clear reminder',
+                        tooltip: context.tr('Clear reminder', 'مسح التذكير'),
                         onPressed: () => setState(() => _reminderAt = null),
                         icon: const Icon(Icons.close),
                       ),
@@ -209,8 +324,8 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                   controller: _notes,
                   minLines: 3,
                   maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes',
+                  decoration: InputDecoration(
+                    labelText: context.tr('Notes', 'ملاحظات'),
                     alignLabelWithHint: true,
                   ),
                 ),
@@ -222,12 +337,16 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(context.tr('Cancel', 'إلغاء')),
         ),
         FilledButton.icon(
           onPressed: _saving ? null : _save,
           icon: const Icon(Icons.save_outlined),
-          label: Text(_saving ? 'Saving...' : 'Save'),
+          label: Text(
+            _saving
+                ? context.tr('Saving...', 'جارٍ الحفظ...')
+                : context.tr('Save', 'حفظ'),
+          ),
         ),
       ],
     );
@@ -248,7 +367,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
       borderRadius: BorderRadius.circular(12),
       onTap: _pickDate,
       child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Date'),
+        decoration: InputDecoration(labelText: context.tr('Date', 'التاريخ')),
         child: Text(DateFormat('MMM d, yyyy').format(_dueDate)),
       ),
     );
@@ -257,7 +376,9 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
   Widget _priorityField() {
     return DropdownButtonFormField<TaskPriority>(
       initialValue: _priority,
-      decoration: const InputDecoration(labelText: 'Priority'),
+      decoration: InputDecoration(
+        labelText: context.tr('Priority', 'الأولوية'),
+      ),
       items: TaskPriority.values
           .map(
             (priority) =>
@@ -308,8 +429,34 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
         notes: _notes.text.trim(),
         completed: _completed,
         reminderAt: _reminderAt,
+        recurrenceType: _recurrenceType,
+        recurrenceInterval: _recurrenceType == RecurrenceType.daily
+            ? 1
+            : _recurrenceType == RecurrenceType.weekly ||
+                  _recurrenceType == RecurrenceType.monthly
+            ? 1
+            : _recurrenceInterval,
+        recurrenceWeekdays:
+            _recurrenceType == RecurrenceType.weekly
+                  ? [_dueDate.weekday]
+                  : _recurrenceWeekdays.toList()
+              ..sort(),
+        recurrenceMonthDay: _recurrenceType == RecurrenceType.monthly
+            ? _dueDate.day
+            : _recurrenceMonthDay,
+        recurrenceGroup: widget.task?.recurrenceGroup,
       ),
     );
     if (mounted) Navigator.pop(context);
+  }
+
+  String _recurrenceLabel(BuildContext context, RecurrenceType type) {
+    return switch (type) {
+      RecurrenceType.none => context.tr('No Repeat', 'بدون تكرار'),
+      RecurrenceType.daily => context.tr('Daily', 'يومياً'),
+      RecurrenceType.weekly => context.tr('Weekly', 'أسبوعياً'),
+      RecurrenceType.monthly => context.tr('Monthly', 'شهرياً'),
+      RecurrenceType.custom => context.tr('Custom', 'مخصص'),
+    };
   }
 }

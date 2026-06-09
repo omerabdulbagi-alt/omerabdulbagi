@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -8,6 +6,8 @@ import '../../core/models.dart';
 import '../widgets/channel_icon.dart';
 import '../widgets/content_editor_dialog.dart';
 import '../widgets/task_editor_dialog.dart';
+import '../widgets/channel_editor_dialog.dart';
+import '../app_localizations.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
@@ -21,6 +21,53 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (controller.channels.isEmpty) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Card(
+            margin: const EdgeInsets.all(20),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.auto_awesome_mosaic,
+                    size: 68,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    context.tr(
+                      'Welcome to ContentFlow',
+                      'مرحباً بك في ContentFlow',
+                    ),
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    context.tr(
+                      'You have no channels yet.',
+                      'ليس لديك أي قنوات بعد.',
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  FilledButton.icon(
+                    onPressed: () => showChannelEditor(context, controller),
+                    icon: const Icon(Icons.add),
+                    label: Text(
+                      context.tr('Create First Channel', 'إنشاء أول قناة'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final now = DateTime.now();
     final today = DateUtils.dateOnly(now);
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
@@ -50,7 +97,7 @@ class DashboardScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           sliver: SliverToBoxAdapter(
             child: _HeroCard(
-              greeting: _greeting(now.hour),
+              greeting: _greeting(context, now.hour),
               completed: completed.length,
               total: todayTasks.length,
               pending: pending.length,
@@ -66,7 +113,7 @@ class DashboardScreen extends StatelessWidget {
                 Expanded(
                   child: _QuickAction(
                     icon: Icons.add_task,
-                    label: 'Add Today Task',
+                    label: context.tr('Add Today Task', 'إضافة مهمة اليوم'),
                     color: const Color(0xFF5B8CFF),
                     onTap: () =>
                         showTaskEditor(context, controller, initialDate: today),
@@ -76,7 +123,7 @@ class DashboardScreen extends StatelessWidget {
                 Expanded(
                   child: _QuickAction(
                     icon: Icons.video_library_outlined,
-                    label: 'Add Content',
+                    label: context.tr('Add Content', 'إضافة محتوى'),
                     color: const Color(0xFF49C98A),
                     onTap: () => showContentEditor(context, controller),
                   ),
@@ -94,30 +141,36 @@ class DashboardScreen extends StatelessWidget {
         if (controller.todaySuggestions.isNotEmpty)
           _Suggestions(controller: controller, today: today),
         _TaskSection(
-          title: 'Pending Today',
+          title: context.tr('Pending Today', 'قيد الانتظار اليوم'),
           icon: Icons.pending_actions,
           color: const Color(0xFF5B8CFF),
           tasks: pending,
           controller: controller,
-          emptyText: 'No pending tasks for today.',
+          emptyText: context.tr(
+            'No pending tasks for today.',
+            'لا توجد مهام معلقة اليوم.',
+          ),
         ),
         _TaskSection(
-          title: 'Completed Today',
+          title: context.tr('Completed Today', 'المكتمل اليوم'),
           icon: Icons.check_circle_outline,
           color: const Color(0xFF49C98A),
           tasks: completed,
           controller: controller,
-          emptyText: 'Completed tasks will appear here.',
+          emptyText: context.tr(
+            'Completed tasks will appear here.',
+            'ستظهر المهام المكتملة هنا.',
+          ),
         ),
         const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
       ],
     );
   }
 
-  String _greeting(int hour) {
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+  String _greeting(BuildContext context, int hour) {
+    if (hour < 12) return context.tr('Good Morning', 'صباح الخير');
+    if (hour < 17) return context.tr('Good Afternoon', 'مساء الخير');
+    return context.tr('Good Evening', 'مساء الخير');
   }
 }
 
@@ -170,7 +223,7 @@ class _HeroCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Today Progress'),
+                    Text(context.tr('Today Progress', 'تقدم اليوم')),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
                       value: progress,
@@ -181,7 +234,10 @@ class _HeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '$completed / $total completed · $pending pending',
+                      context.tr(
+                        '$completed / $total completed · $pending pending',
+                        '$completed / $total مكتمل · $pending معلق',
+                      ),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ],
@@ -207,7 +263,10 @@ class _HeroCard extends StatelessWidget {
                           '$score%',
                           style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
-                        const Text('Score', style: TextStyle(fontSize: 11)),
+                        Text(
+                          context.tr('Score', 'النتيجة'),
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ],
                     ),
                   ],
@@ -226,49 +285,27 @@ class _WeeklyProgress extends StatelessWidget {
   final AppController controller;
   final List<ManualTask> weekTasks;
 
-  static const targets = {
-    'Madih': 7,
-    'Balad360': 3,
-    'Zooli Arabic': 2,
-    'Zooli English': 2,
-    'Zooli Arabic TikTok': 2,
-    'Quran': 0,
-  };
-
   @override
   Widget build(BuildContext context) => SliverPadding(
     padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
     sliver: SliverToBoxAdapter(
       child: _SectionCard(
-        title: 'Weekly Progress',
+        title: context.tr('Weekly Progress', 'التقدم الأسبوعي'),
         icon: Icons.insights_outlined,
         child: Column(
-          children: targets.entries.map((entry) {
-            final channel = controller.channelNamed(entry.key);
-            final completed = channel == null
-                ? 0
-                : weekTasks
-                      .where(
-                        (task) =>
-                            task.channelId == channel.id && task.completed,
-                      )
-                      .length;
-            final target = entry.value;
-            final denominator = target == 0
-                ? math.max(
-                    1,
-                    channel == null
-                        ? 0
-                        : weekTasks
-                              .where((task) => task.channelId == channel.id)
-                              .length,
-                  )
-                : target;
+          children: controller.activeChannels.map((channel) {
+            final channelTasks = weekTasks
+                .where((task) => task.channelId == channel.id)
+                .toList();
+            final completed = channelTasks
+                .where((task) => task.completed)
+                .length;
+            final denominator = channelTasks.isEmpty ? 1 : channelTasks.length;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Expanded(child: Text(entry.key)),
+                  Expanded(child: Text(channel.name)),
                   SizedBox(
                     width: 110,
                     child: LinearProgressIndicator(
@@ -281,7 +318,7 @@ class _WeeklyProgress extends StatelessWidget {
                   SizedBox(
                     width: 48,
                     child: Text(
-                      target == 0 ? '$completed' : '$completed/$target',
+                      '$completed/${channelTasks.length}',
                       textAlign: TextAlign.end,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
@@ -313,7 +350,10 @@ class _ChannelOverview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Title(icon: Icons.hub_outlined, title: 'Channel Overview'),
+          _Title(
+            icon: Icons.hub_outlined,
+            title: context.tr('Channel Overview', 'نظرة عامة على القنوات'),
+          ),
           const SizedBox(height: 10),
           SizedBox(
             height: 190,
@@ -334,15 +374,16 @@ class _ChannelOverview extends StatelessWidget {
                           task.dueDate.isBefore(weekEnd),
                     )
                     .length;
-                final dates = controller.items
-                    .where(
-                      (item) =>
-                          item.channelId == channel.id &&
-                          item.scheduledDate != null,
-                    )
-                    .map((item) => item.scheduledDate!)
-                    .toList()
-                  ..sort();
+                final dates =
+                    controller.items
+                        .where(
+                          (item) =>
+                              item.channelId == channel.id &&
+                              item.scheduledDate != null,
+                        )
+                        .map((item) => item.scheduledDate!)
+                        .toList()
+                      ..sort();
                 return SizedBox(
                   width: 245,
                   child: Card(
@@ -380,12 +421,28 @@ class _ChannelOverview extends StatelessWidget {
                             ],
                           ),
                           const Spacer(),
-                          Text('${tasks.where((task) => !task.completed).length} pending'),
-                          Text('$completedWeek completed this week'),
+                          Text(
+                            context.tr(
+                              '${tasks.where((task) => !task.completed).length} pending',
+                              '${tasks.where((task) => !task.completed).length} معلقة',
+                            ),
+                          ),
+                          Text(
+                            context.tr(
+                              '$completedWeek completed this week',
+                              '$completedWeek مكتملة هذا الأسبوع',
+                            ),
+                          ),
                           Text(
                             dates.isEmpty
-                                ? 'No content date'
-                                : 'Last content ${DateFormat('MMM d').format(dates.last)}',
+                                ? context.tr(
+                                    'No content date',
+                                    'لا يوجد تاريخ محتوى',
+                                  )
+                                : context.tr(
+                                    'Last content ${DateFormat('MMM d').format(dates.last)}',
+                                    'آخر محتوى ${DateFormat('MMM d', 'ar').format(dates.last)}',
+                                  ),
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.outline,
                             ),
@@ -401,7 +458,7 @@ class _ChannelOverview extends StatelessWidget {
                                 initialChannelId: channel.id,
                               ),
                               icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Add Task'),
+                              label: Text(context.tr('Add Task', 'إضافة مهمة')),
                             ),
                           ),
                         ],

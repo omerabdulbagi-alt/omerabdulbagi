@@ -1,6 +1,10 @@
-# my_content_manager
+# ContentFlow
 
-A new Flutter project.
+Plan • Create • Publish
+
+ContentFlow is a bilingual content planning and productivity app for creators.
+It includes channels, content workflows, recurring tasks, reminders, a smart
+dashboard, light and dark themes, and local SQLite storage.
 
 ## Getting Started
 

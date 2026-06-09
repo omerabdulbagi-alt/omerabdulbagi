@@ -16,7 +16,7 @@ class LocalDatabase {
     _database = await _databaseFactory.openDatabase(
       p.join(basePath, 'my_content_manager.db'),
       options: OpenDatabaseOptions(
-        version: 6,
+        version: 7,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE channels (
@@ -47,8 +47,6 @@ class LocalDatabase {
           await _createManualTasksTable(db);
           await _createMetadataTable(db);
           await _createDismissedSuggestionsTable(db);
-          await _seedChannels(db);
-          await _seedSampleContent(db);
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -67,31 +65,13 @@ class LocalDatabase {
           if (oldVersion < 6) {
             await _upgradeToChannelManagement(db);
           }
+          if (oldVersion < 7) {
+            await _upgradeToContentFlow(db);
+          }
         },
       ),
     );
     return _database!;
-  }
-
-  Future<void> _seedChannels(Database db) async {
-    final channels = [
-      ['Zooli Arabic', 'YouTube', 0xFF5B8CFF, 'video'],
-      ['Zooli English', 'YouTube', 0xFF64B5F6, 'language'],
-      ['Zooli Arabic TikTok', 'TikTok', 0xFFB47CFF, 'short'],
-      ['Balad360', 'Facebook', 0xFF4F7CFF, 'public'],
-      ['Quran', 'YouTube', 0xFF49C98A, 'book'],
-      ['Madih', 'YouTube', 0xFFFFA94D, 'audio'],
-    ];
-    for (final channel in channels) {
-      await db.insert('channels', {
-        'name': channel[0],
-        'platform': channel[1],
-        'color_value': channel[2],
-        'icon_key': channel[3],
-        'is_default': 1,
-        'archived': 0,
-      });
-    }
   }
 
   Future<void> _upgradeToChannelManagement(Database db) async {
@@ -194,10 +174,54 @@ class LocalDatabase {
         notes TEXT NOT NULL DEFAULT '',
         completed INTEGER NOT NULL DEFAULT 0,
         reminder_at TEXT,
+        recurrence_type TEXT NOT NULL DEFAULT 'none',
+        recurrence_interval INTEGER NOT NULL DEFAULT 1,
+        recurrence_weekdays TEXT NOT NULL DEFAULT '',
+        recurrence_month_day INTEGER,
+        recurrence_group TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY(channel_id) REFERENCES channels(id)
       )
     ''');
+  }
+
+  Future<void> _upgradeToContentFlow(Database db) async {
+    await db.execute(
+      "ALTER TABLE daily_tasks ADD COLUMN recurrence_type TEXT NOT NULL DEFAULT 'none'",
+    );
+    await db.execute(
+      'ALTER TABLE daily_tasks ADD COLUMN recurrence_interval INTEGER NOT NULL DEFAULT 1',
+    );
+    await db.execute(
+      "ALTER TABLE daily_tasks ADD COLUMN recurrence_weekdays TEXT NOT NULL DEFAULT ''",
+    );
+    await db.execute(
+      'ALTER TABLE daily_tasks ADD COLUMN recurrence_month_day INTEGER',
+    );
+    await db.execute(
+      'ALTER TABLE daily_tasks ADD COLUMN recurrence_group TEXT',
+    );
+    await db.update('channels', {'is_default': 0});
+  }
+
+  Future<String?> getMetadata(String key) async {
+    final db = await database;
+    final rows = await db.query(
+      'app_metadata',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first['value'] as String;
+  }
+
+  Future<void> setMetadata(String key, String value) async {
+    final db = await database;
+    await db.insert('app_metadata', {
+      'key': key,
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> _upgradeToEnglishChannelsAndTaskState(Database db) async {

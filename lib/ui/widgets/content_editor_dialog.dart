@@ -3,12 +3,18 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
+import '../app_localizations.dart';
+import 'channel_editor_dialog.dart';
 
 Future<void> showContentEditor(
   BuildContext context,
   AppController controller, {
   ContentItem? item,
 }) async {
+  if (controller.activeChannels.isEmpty) {
+    await showChannelEditor(context, controller);
+    if (controller.activeChannels.isEmpty || !context.mounted) return;
+  }
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -49,8 +55,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
     _description = TextEditingController(text: item?.description);
     _notes = TextEditingController(text: item?.notes);
     _url = TextEditingController(text: item?.publishedUrl);
-    _channelId =
-        item?.channelId ?? widget.controller.activeChannels.first.id!;
+    _channelId = item?.channelId ?? widget.controller.activeChannels.first.id!;
     _type = item?.type ?? _types.first;
     _status = item?.status ?? WorkflowStatus.idea;
     _scheduledDate = item?.scheduledDate;
@@ -70,7 +75,11 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
     final isPhone = MediaQuery.sizeOf(context).width < 600;
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(widget.item == null ? 'Add Content' : 'Edit Content'),
+      title: Text(
+        widget.item == null
+            ? context.tr('Add Content', 'إضافة محتوى')
+            : context.tr('Edit Content', 'تعديل المحتوى'),
+      ),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
         child: Form(
@@ -80,7 +89,9 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
               children: [
                 TextFormField(
                   controller: _title,
-                  decoration: const InputDecoration(labelText: 'Content title'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Content title', 'عنوان المحتوى'),
+                  ),
                   validator: (value) => value == null || value.trim().isEmpty
                       ? 'Enter a content title'
                       : null,
@@ -122,8 +133,11 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
                   controller: _description,
                   minLines: 3,
                   maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Description or script',
+                  decoration: InputDecoration(
+                    labelText: context.tr(
+                      'Description or script',
+                      'الوصف أو النص',
+                    ),
                     alignLabelWithHint: true,
                   ),
                 ),
@@ -132,15 +146,17 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
                   controller: _notes,
                   minLines: 2,
                   maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes',
+                  decoration: InputDecoration(
+                    labelText: context.tr('Notes', 'ملاحظات'),
                     alignLabelWithHint: true,
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _url,
-                  decoration: const InputDecoration(labelText: 'Published URL'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Published URL', 'رابط النشر'),
+                  ),
                 ),
               ],
             ),
@@ -150,12 +166,16 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(context.tr('Cancel', 'إلغاء')),
         ),
         FilledButton.icon(
           onPressed: _saving ? null : _save,
           icon: const Icon(Icons.save_outlined),
-          label: Text(_saving ? 'Saving...' : 'Save'),
+          label: Text(
+            _saving
+                ? context.tr('Saving...', 'جارٍ الحفظ...')
+                : context.tr('Save', 'حفظ'),
+          ),
         ),
       ],
     );
@@ -174,11 +194,9 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
   Widget _channelField() {
     return DropdownButtonFormField<int>(
       initialValue: _channelId,
-      decoration: const InputDecoration(labelText: 'Channel'),
+      decoration: InputDecoration(labelText: context.tr('Channel', 'القناة')),
       items: widget.controller.channels
-          .where(
-            (channel) => !channel.archived || channel.id == _channelId,
-          )
+          .where((channel) => !channel.archived || channel.id == _channelId)
           .map(
             (channel) => DropdownMenuItem(
               value: channel.id!,
@@ -193,7 +211,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
   Widget _typeField() {
     return DropdownButtonFormField<String>(
       initialValue: _type,
-      decoration: const InputDecoration(labelText: 'Type'),
+      decoration: InputDecoration(labelText: context.tr('Type', 'النوع')),
       items: _types
           .map((type) => DropdownMenuItem(value: type, child: Text(type)))
           .toList(),
@@ -204,7 +222,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
   Widget _statusField() {
     return DropdownButtonFormField<WorkflowStatus>(
       initialValue: _status,
-      decoration: const InputDecoration(labelText: 'Status'),
+      decoration: InputDecoration(labelText: context.tr('Status', 'الحالة')),
       items: WorkflowStatus.values
           .map(
             (status) =>
@@ -220,10 +238,12 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
       borderRadius: BorderRadius.circular(12),
       onTap: _pickDate,
       child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Publish date'),
+        decoration: InputDecoration(
+          labelText: context.tr('Publish date', 'تاريخ النشر'),
+        ),
         child: Text(
           _scheduledDate == null
-              ? 'No date'
+              ? context.tr('No date', 'بدون تاريخ')
               : DateFormat('yyyy/MM/dd').format(_scheduledDate!),
         ),
       ),
@@ -232,7 +252,7 @@ class _ContentEditorDialogState extends State<ContentEditorDialog> {
 
   Widget _clearDateButton() {
     return IconButton(
-      tooltip: 'Clear date',
+      tooltip: context.tr('Clear date', 'مسح التاريخ'),
       onPressed: () => setState(() => _scheduledDate = null),
       icon: const Icon(Icons.close),
     );

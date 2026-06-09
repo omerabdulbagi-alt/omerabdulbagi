@@ -4,23 +4,12 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import 'channel_icon.dart';
 import 'task_editor_dialog.dart';
+import '../app_localizations.dart';
 
 Future<void> showQuickCreate(
   BuildContext context,
   AppController controller,
 ) async {
-  final options = <({String title, String channel, TaskType type})>[
-    (title: 'Zooli Arabic Video', channel: 'Zooli Arabic', type: TaskType.video),
-    (title: 'Zooli English Video', channel: 'Zooli English', type: TaskType.video),
-    (
-      title: 'Zooli Arabic TikTok Short',
-      channel: 'Zooli Arabic TikTok',
-      type: TaskType.short,
-    ),
-    (title: 'Balad360 Post', channel: 'Balad360', type: TaskType.post),
-    (title: 'Quran Video', channel: 'Quran', type: TaskType.video),
-    (title: 'Madih Video', channel: 'Madih', type: TaskType.video),
-  ];
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -33,32 +22,34 @@ Future<void> showQuickCreate(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Create Content',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              context.tr('Create Content', 'إنشاء محتوى'),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
-            ...options.map((option) {
-              final channel = controller.channelNamed(option.channel);
-              if (channel == null || channel.archived) {
-                return const SizedBox.shrink();
-              }
+            ...controller.activeChannels.map((channel) {
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: Color(channel.colorValue),
-                  child: Icon(channelIcon(channel.iconKey), color: Colors.white),
+                  child: Icon(
+                    channelIcon(channel.iconKey),
+                    color: Colors.white,
+                  ),
                 ),
-                title: Text(option.title),
-                subtitle: Text('${channel.platform} · ${option.type.label}'),
+                title: Text(channel.name),
+                subtitle: Text(channel.platform),
                 trailing: const Icon(Icons.add_circle_outline),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await controller.saveTask(
                     ManualTask(
-                      title: option.title,
+                      title: context.tr(
+                        'New ${channel.name} task',
+                        'مهمة جديدة لقناة ${channel.name}',
+                      ),
                       channelId: channel.id!,
-                      type: option.type,
+                      type: TaskType.task,
                       dueDate: DateUtils.dateOnly(DateTime.now()),
                       priority: TaskPriority.medium,
                       status: TaskStatus.planned,
@@ -69,8 +60,13 @@ Future<void> showQuickCreate(
             }),
             ListTile(
               leading: const CircleAvatar(child: Icon(Icons.add_task)),
-              title: const Text('Custom Task'),
-              subtitle: const Text('Choose all details manually'),
+              title: Text(context.tr('Custom Task', 'مهمة مخصصة')),
+              subtitle: Text(
+                context.tr(
+                  'Choose all details manually',
+                  'اختر جميع التفاصيل يدوياً',
+                ),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 showTaskEditor(

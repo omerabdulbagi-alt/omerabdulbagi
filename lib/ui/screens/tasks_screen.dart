@@ -5,6 +5,7 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../widgets/page_header.dart';
 import '../widgets/task_editor_dialog.dart';
+import '../app_localizations.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key, required this.controller});
@@ -30,12 +31,15 @@ class _TasksScreenState extends State<TasksScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PageHeader(
-            title: 'Today Tasks',
-            subtitle: 'Create, prioritize, and complete your tasks',
+            title: context.tr('Today Tasks', 'مهام اليوم'),
+            subtitle: context.tr(
+              'Create, prioritize, and complete your tasks',
+              'أنشئ مهامك وحدد أولوياتها وأكملها',
+            ),
             action: FilledButton.icon(
               onPressed: () => showTaskEditor(context, widget.controller),
               icon: const Icon(Icons.add),
-              label: const Text('Add Task'),
+              label: Text(context.tr('Add Task', 'إضافة مهمة')),
             ),
           ),
           const SizedBox(height: 20),
@@ -45,13 +49,13 @@ class _TasksScreenState extends State<TasksScreen> {
               width: 210,
               child: DropdownButtonFormField<TaskStatus?>(
                 initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: 'Filter by status',
+                decoration: InputDecoration(
+                  labelText: context.tr('Filter by status', 'تصفية حسب الحالة'),
                 ),
                 items: [
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: null,
-                    child: Text('All statuses'),
+                    child: Text(context.tr('All statuses', 'كل الحالات')),
                   ),
                   ...TaskStatus.values.map(
                     (status) => DropdownMenuItem(
@@ -68,7 +72,11 @@ class _TasksScreenState extends State<TasksScreen> {
           Expanded(
             child: Card(
               child: tasks.isEmpty
-                  ? const Center(child: Text('No tasks yet'))
+                  ? Center(
+                      child: Text(
+                        context.tr('No tasks yet', 'لا توجد مهام بعد'),
+                      ),
+                    )
                   : ListView.separated(
                       itemCount: tasks.length,
                       separatorBuilder: (_, _) => const Divider(height: 1),
@@ -118,14 +126,16 @@ class _TasksScreenState extends State<TasksScreen> {
                                       _confirmDelete(task);
                                     }
                                   },
-                                  itemBuilder: (context) => const [
+                                  itemBuilder: (context) => [
                                     PopupMenuItem(
                                       value: 'edit',
-                                      child: Text('Edit Task'),
+                                      child: Text(
+                                        context.tr('Edit Task', 'تعديل المهمة'),
+                                      ),
                                     ),
                                     PopupMenuItem(
                                       value: 'delete',
-                                      child: Text('Delete'),
+                                      child: Text(context.tr('Delete', 'حذف')),
                                     ),
                                   ],
                                 )
@@ -139,7 +149,10 @@ class _TasksScreenState extends State<TasksScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     IconButton(
-                                      tooltip: 'Edit Task',
+                                      tooltip: context.tr(
+                                        'Edit Task',
+                                        'تعديل المهمة',
+                                      ),
                                       onPressed: () => showTaskEditor(
                                         context,
                                         widget.controller,
@@ -148,7 +161,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                       icon: const Icon(Icons.edit_outlined),
                                     ),
                                     IconButton(
-                                      tooltip: 'Delete',
+                                      tooltip: context.tr('Delete', 'حذف'),
                                       onPressed: () => _confirmDelete(task),
                                       icon: const Icon(Icons.delete_outline),
                                     ),
@@ -173,16 +186,16 @@ class _TasksScreenState extends State<TasksScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete task'),
+        title: Text(context.tr('Delete task', 'حذف المهمة')),
         content: Text('Delete "${task.title}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('Cancel', 'إلغاء')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete', 'حذف')),
           ),
         ],
       ),

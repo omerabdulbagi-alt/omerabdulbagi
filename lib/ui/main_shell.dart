@@ -9,6 +9,8 @@ import 'screens/tasks_screen.dart';
 import 'screens/workflow_screen.dart';
 import 'screens/settings_screen.dart';
 import 'widgets/quick_create_sheet.dart';
+import 'app_localizations.dart';
+import 'widgets/channel_editor_dialog.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.controller});
@@ -21,16 +23,6 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
-  static const _labels = [
-    'Home',
-    'Content',
-    'Workflow',
-    'Calendar',
-    'Today Tasks',
-    'Channels',
-    'Settings',
-  ];
-
   static const _icons = [
     Icons.dashboard_outlined,
     Icons.video_library_outlined,
@@ -41,48 +33,28 @@ class _MainShellState extends State<MainShell> {
     Icons.settings_outlined,
   ];
 
-  static const _destinations = [
-    NavigationRailDestination(
-      icon: Icon(Icons.dashboard_outlined),
-      selectedIcon: Icon(Icons.dashboard),
-      label: Text('Home'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.video_library_outlined),
-      selectedIcon: Icon(Icons.video_library),
-      label: Text('Content'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.view_kanban_outlined),
-      selectedIcon: Icon(Icons.view_kanban),
-      label: Text('Workflow'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.calendar_month_outlined),
-      selectedIcon: Icon(Icons.calendar_month),
-      label: Text('Calendar'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.task_alt_outlined),
-      selectedIcon: Icon(Icons.task_alt),
-      label: Text('Today Tasks'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.hub_outlined),
-      selectedIcon: Icon(Icons.hub),
-      label: Text('Channels'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.settings_outlined),
-      label: Text('Settings'),
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
+        final labels = [
+          context.tr('Home', 'الرئيسية'),
+          context.tr('Content', 'المحتوى'),
+          context.tr('Workflow', 'سير العمل'),
+          context.tr('Calendar', 'التقويم'),
+          context.tr('Today Tasks', 'مهام اليوم'),
+          context.tr('Channels', 'القنوات'),
+          context.tr('Settings', 'الإعدادات'),
+        ];
+        final destinations = List.generate(
+          labels.length,
+          (index) => NavigationRailDestination(
+            icon: Icon(_icons[index]),
+            selectedIcon: Icon(_icons[index]),
+            label: Text(labels[index]),
+          ),
+        );
         final screens = [
           DashboardScreen(
             controller: widget.controller,
@@ -104,21 +76,21 @@ class _MainShellState extends State<MainShell> {
             if (isPhone) {
               return Scaffold(
                 appBar: AppBar(
-                  title: Text(_labels[_selectedIndex]),
+                  title: Text(labels[_selectedIndex]),
                   centerTitle: false,
                 ),
                 drawer: Drawer(
                   child: SafeArea(
                     child: Column(
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.all(24),
+                        Padding(
+                          padding: const EdgeInsets.all(24),
                           child: Row(
                             children: [
-                              Icon(Icons.auto_awesome_mosaic, size: 30),
-                              SizedBox(width: 12),
-                              Text(
-                                'My Tasks',
+                              const Icon(Icons.auto_awesome_mosaic, size: 30),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'ContentFlow',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -130,11 +102,11 @@ class _MainShellState extends State<MainShell> {
                         const Divider(height: 1),
                         Expanded(
                           child: ListView.builder(
-                            itemCount: _labels.length,
+                            itemCount: labels.length,
                             itemBuilder: (context, index) => ListTile(
                               selected: index == _selectedIndex,
                               leading: Icon(_icons[index]),
-                              title: Text(_labels[index]),
+                              title: Text(labels[index]),
                               onTap: () {
                                 setState(() => _selectedIndex = index);
                                 Navigator.pop(context);
@@ -148,35 +120,41 @@ class _MainShellState extends State<MainShell> {
                 ),
                 body: SafeArea(child: content),
                 floatingActionButton: FloatingActionButton.extended(
-                  onPressed: () => showQuickCreate(context, widget.controller),
+                  onPressed: () => widget.controller.activeChannels.isEmpty
+                      ? showChannelEditor(context, widget.controller)
+                      : showQuickCreate(context, widget.controller),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create Content'),
+                  label: Text(
+                    widget.controller.activeChannels.isEmpty
+                        ? context.tr('Create First Channel', 'إنشاء أول قناة')
+                        : context.tr('Create', 'إنشاء'),
+                  ),
                 ),
                 bottomNavigationBar: NavigationBar(
                   selectedIndex: _mobileIndex(_selectedIndex),
                   onDestinationSelected: (index) =>
                       setState(() => _selectedIndex = _screenIndex(index)),
-                  destinations: const [
+                  destinations: [
                     NavigationDestination(
                       icon: Icon(Icons.dashboard_outlined),
                       selectedIcon: Icon(Icons.dashboard),
-                      label: 'Home',
+                      label: context.tr('Home', 'الرئيسية'),
                     ),
                     NavigationDestination(
                       icon: Icon(Icons.task_alt_outlined),
-                      label: 'Tasks',
+                      label: context.tr('Tasks', 'المهام'),
                     ),
                     NavigationDestination(
                       icon: Icon(Icons.video_library_outlined),
-                      label: 'Content',
+                      label: context.tr('Content', 'المحتوى'),
                     ),
                     NavigationDestination(
                       icon: Icon(Icons.calendar_month_outlined),
-                      label: 'Calendar',
+                      label: context.tr('Calendar', 'التقويم'),
                     ),
                     NavigationDestination(
                       icon: Icon(Icons.hub_outlined),
-                      label: 'Channels',
+                      label: context.tr('Channels', 'القنوات'),
                     ),
                   ],
                 ),
@@ -194,7 +172,7 @@ class _MainShellState extends State<MainShell> {
                       padding: EdgeInsets.symmetric(vertical: 20),
                       child: Icon(Icons.auto_awesome_mosaic, size: 32),
                     ),
-                    destinations: _destinations,
+                    destinations: destinations,
                   ),
                   const VerticalDivider(width: 1),
                   Expanded(child: content),

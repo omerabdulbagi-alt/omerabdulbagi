@@ -37,6 +37,10 @@ void main() {
       notes: 'Review audio and video',
       completed: true,
       reminderAt: DateTime(2026, 6, 12, 9, 30),
+      recurrenceType: RecurrenceType.custom,
+      recurrenceInterval: 2,
+      recurrenceWeekdays: const [DateTime.monday, DateTime.thursday],
+      recurrenceGroup: 'series-1',
     );
 
     final restored = ManualTask.fromMap(task.toMap());
@@ -48,5 +52,9 @@ void main() {
     expect(restored.notes, 'Review audio and video');
     expect(restored.completed, isTrue);
     expect(restored.reminderAt, DateTime(2026, 6, 12, 9, 30));
+    expect(restored.recurrenceType, RecurrenceType.custom);
+    expect(restored.recurrenceInterval, 2);
+    expect(restored.recurrenceWeekdays, [1, 4]);
+    expect(restored.recurrenceGroup, 'series-1');
   });
 }

@@ -44,7 +44,7 @@ class NotificationService {
 
       await _plugin.zonedSchedule(
         id,
-        'My Tasks reminder',
+        'ContentFlow reminder',
         task.title,
         tz.TZDateTime.from(reminder.toUtc(), tz.UTC),
         const NotificationDetails(
@@ -81,7 +81,7 @@ class NotificationService {
     try {
       await _plugin.show(
         900001,
-        'My Tasks',
+        'ContentFlow',
         'Notifications are working.',
         const NotificationDetails(
           android: AndroidNotificationDetails(

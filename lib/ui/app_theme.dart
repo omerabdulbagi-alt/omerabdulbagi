@@ -1,36 +1,45 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const _background = Color(0xFF08111F);
-  static const _surface = Color(0xFF111D31);
-  static const _accent = Color(0xFF5B8CFF);
+  static const _accent = Color(0xFF087EA4);
+  static const _teal = Color(0xFF16B8A6);
 
-  static ThemeData get dark {
+  static ThemeData get light => _theme(Brightness.light);
+  static ThemeData get dark => _theme(Brightness.dark);
+
+  static ThemeData _theme(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
       seedColor: _accent,
-      brightness: Brightness.dark,
-      surface: _surface,
+      brightness: brightness,
+      primary: _accent,
+      secondary: _teal,
+      surface: dark ? const Color(0xFF172231) : Colors.white,
     );
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: _background,
+      scaffoldBackgroundColor: dark
+          ? const Color(0xFF0E1724)
+          : const Color(0xFFF5F7FA),
       cardTheme: CardThemeData(
-        color: _surface,
-        elevation: 2,
-        shadowColor: Colors.black.withValues(alpha: 0.28),
+        color: scheme.surface,
+        elevation: dark ? 1 : 2,
+        shadowColor: Colors.black.withValues(alpha: dark ? 0.24 : 0.08),
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: _background,
+      appBarTheme: AppBarTheme(
+        backgroundColor: dark
+            ? const Color(0xFF0E1724)
+            : const Color(0xFFF5F7FA),
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF17253B),
+        fillColor: dark ? const Color(0xFF1D2B3D) : const Color(0xFFEEF2F6),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -50,18 +59,18 @@ class AppTheme {
           (states) => states.contains(WidgetState.selected) ? _accent : null,
         ),
       ),
-      navigationRailTheme: const NavigationRailThemeData(
-        backgroundColor: _surface,
-        indicatorColor: Color(0xFF223E72),
-        selectedIconTheme: IconThemeData(color: _accent),
-        selectedLabelTextStyle: TextStyle(
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: scheme.surface,
+        indicatorColor: scheme.primaryContainer,
+        selectedIconTheme: const IconThemeData(color: _accent),
+        selectedLabelTextStyle: const TextStyle(
           color: _accent,
           fontWeight: FontWeight.bold,
         ),
       ),
-      navigationBarTheme: const NavigationBarThemeData(
-        backgroundColor: _surface,
-        indicatorColor: Color(0xFF223E72),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: scheme.surface,
+        indicatorColor: scheme.primaryContainer,
         height: 68,
       ),
     );

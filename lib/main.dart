@@ -11,6 +11,7 @@ import 'core/local_database.dart';
 import 'core/notification_service.dart';
 import 'ui/app_theme.dart';
 import 'ui/main_shell.dart';
+import 'ui/app_localizations.dart';
 
 void main() {
   runZonedGuarded(
@@ -43,6 +44,7 @@ class AppBootstrap extends StatefulWidget {
 }
 
 class _AppBootstrapState extends State<AppBootstrap> {
+  final ChangeNotifier _fallbackListenable = ChangeNotifier();
   AppController? _controller;
   Object? _error;
   StackTrace? _stackTrace;
@@ -81,19 +83,31 @@ class _AppBootstrapState extends State<AppBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'My Tasks',
-      locale: const Locale('en'),
-      supportedLocales: const [Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: AppTheme.dark,
-      home: _buildHome(),
+    final controller = _controller;
+    return AnimatedBuilder(
+      animation: controller ?? _fallbackListenable,
+      builder: (context, _) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'ContentFlow',
+        locale: controller?.settings.locale ?? const Locale('en'),
+        supportedLocales: const [Locale('en'), Locale('ar')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: controller?.settings.themeMode ?? ThemeMode.light,
+        home: _buildHome(),
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    _fallbackListenable.dispose();
+    super.dispose();
   }
 
   Widget _buildHome() {
@@ -112,7 +126,9 @@ class _AppBootstrapState extends State<AppBootstrap> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Starting My Tasks...'),
+              Text('ContentFlow'),
+              SizedBox(height: 6),
+              Text('Plan • Create • Publish'),
             ],
           ),
         ),
@@ -156,12 +172,18 @@ class StartupErrorScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Unable to start the app',
+                        context.tr(
+                          'Unable to start the app',
+                          'تعذر تشغيل التطبيق',
+                        ),
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 10),
-                      const Text(
-                        'An error occurred while initializing local storage.',
+                      Text(
+                        context.tr(
+                          'An error occurred while initializing local storage.',
+                          'حدث خطأ أثناء تهيئة التخزين المحلي.',
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -173,7 +195,9 @@ class StartupErrorScreen extends StatelessWidget {
                       if (kDebugMode && stackTrace != null) ...[
                         const SizedBox(height: 12),
                         ExpansionTile(
-                          title: const Text('Error details'),
+                          title: Text(
+                            context.tr('Error details', 'تفاصيل الخطأ'),
+                          ),
                           children: [
                             SelectableText(
                               stackTrace.toString(),
@@ -187,7 +211,7 @@ class StartupErrorScreen extends StatelessWidget {
                       FilledButton.icon(
                         onPressed: onRetry,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
+                        label: Text(context.tr('Retry', 'إعادة المحاولة')),
                       ),
                     ],
                   ),

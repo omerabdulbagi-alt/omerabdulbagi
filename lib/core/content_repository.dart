@@ -2,6 +2,8 @@ import 'package:sqflite_common/sqlite_api.dart';
 
 import 'local_database.dart';
 import 'models.dart';
+import 'app_settings.dart';
+import 'package:flutter/material.dart';
 
 class ContentRepository {
   ContentRepository(this._localDatabase);
@@ -11,17 +13,7 @@ class ContentRepository {
     final db = await _localDatabase.database;
     return (await db.query(
       'channels',
-      orderBy: '''
-        CASE name
-          WHEN 'Zooli Arabic' THEN 1
-          WHEN 'Zooli English' THEN 2
-          WHEN 'Zooli Arabic TikTok' THEN 3
-          WHEN 'Balad360' THEN 4
-          WHEN 'Quran' THEN 5
-          WHEN 'Madih' THEN 6
-          ELSE 99
-        END
-      ''',
+      orderBy: 'archived, name COLLATE NOCASE',
     )).map(Channel.fromMap).toList();
   }
 
@@ -48,7 +40,7 @@ class ContentRepository {
     );
   }
 
-  Future<void> deleteCustomChannel(int id) async {
+  Future<void> deleteChannel(int id) async {
     final db = await _localDatabase.database;
     final taskRows = await db.rawQuery(
       'SELECT COUNT(*) AS count FROM daily_tasks WHERE channel_id = ?',
@@ -67,6 +59,23 @@ class ContentRepository {
     }
   }
 
+  Future<AppSettings> getSettings() async {
+    final locale = await _localDatabase.getMetadata('locale_code') ?? 'en';
+    final theme = await _localDatabase.getMetadata('theme_mode') ?? 'light';
+    return AppSettings(
+      localeCode: locale,
+      themeMode: theme == 'dark' ? ThemeMode.dark : ThemeMode.light,
+    );
+  }
+
+  Future<void> saveSettings(AppSettings settings) async {
+    await _localDatabase.setMetadata('locale_code', settings.localeCode);
+    await _localDatabase.setMetadata(
+      'theme_mode',
+      settings.themeMode == ThemeMode.dark ? 'dark' : 'light',
+    );
+  }
+
   Future<Set<String>> getDismissedSuggestions(String date) async {
     final db = await _localDatabase.database;
     final rows = await db.query(
@@ -80,11 +89,10 @@ class ContentRepository {
 
   Future<void> dismissSuggestion(String key, String date) async {
     final db = await _localDatabase.database;
-    await db.insert(
-      'dismissed_suggestions',
-      {'suggestion_key': key, 'suggestion_date': date},
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await db.insert('dismissed_suggestions', {
+      'suggestion_key': key,
+      'suggestion_date': date,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   Future<List<ContentItem>> getContentItems() async {

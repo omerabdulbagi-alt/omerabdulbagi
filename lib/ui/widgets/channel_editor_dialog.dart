@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import 'channel_icon.dart';
+import '../app_localizations.dart';
 
 const _channelColors = [
   0xFF5B8CFF,
@@ -44,7 +45,7 @@ class ChannelEditorDialog extends StatefulWidget {
 class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
-  late final TextEditingController _platform;
+  late String _platform;
   late int _color;
   late String _iconKey;
   bool _saving = false;
@@ -53,9 +54,7 @@ class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.channel?.name);
-    _platform = TextEditingController(
-      text: widget.channel?.platform ?? 'YouTube',
-    );
+    _platform = widget.channel?.platform ?? 'YouTube';
     _color = widget.channel?.colorValue ?? _channelColors.first;
     _iconKey = widget.channel?.iconKey ?? 'video';
   }
@@ -63,7 +62,6 @@ class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
   @override
   void dispose() {
     _name.dispose();
-    _platform.dispose();
     super.dispose();
   }
 
@@ -82,22 +80,40 @@ class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
               children: [
                 TextFormField(
                   controller: _name,
-                  decoration: const InputDecoration(labelText: 'Channel name'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Channel name', 'اسم القناة'),
+                  ),
                   validator: (value) => value == null || value.trim().isEmpty
                       ? 'Enter a channel name'
                       : null,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _platform,
-                  decoration: const InputDecoration(labelText: 'Platform'),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Enter a platform'
-                      : null,
+                DropdownButtonFormField<String>(
+                  initialValue: _platform,
+                  decoration: InputDecoration(
+                    labelText: context.tr('Platform', 'المنصة'),
+                  ),
+                  items:
+                      const [
+                            'YouTube',
+                            'Facebook',
+                            'TikTok',
+                            'Instagram',
+                            'Website',
+                            'Other',
+                          ]
+                          .map(
+                            (platform) => DropdownMenuItem(
+                              value: platform,
+                              child: Text(platform),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (value) => setState(() => _platform = value!),
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  'Color',
+                  context.tr('Color', 'اللون'),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
@@ -132,7 +148,7 @@ class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  'Icon',
+                  context.tr('Icon', 'الأيقونة'),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
@@ -143,8 +159,7 @@ class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
                       .map(
                         (entry) => IconButton.filledTonal(
                           isSelected: _iconKey == entry.key,
-                          onPressed: () =>
-                              setState(() => _iconKey = entry.key),
+                          onPressed: () => setState(() => _iconKey = entry.key),
                           icon: Icon(entry.value),
                         ),
                       )
@@ -158,12 +173,12 @@ class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(context.tr('Cancel', 'إلغاء')),
         ),
         FilledButton.icon(
           onPressed: _saving ? null : _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Save'),
+          label: Text(context.tr('Save', 'حفظ')),
         ),
       ],
     );
@@ -176,7 +191,7 @@ class _ChannelEditorDialogState extends State<ChannelEditorDialog> {
       Channel(
         id: widget.channel?.id,
         name: _name.text.trim(),
-        platform: _platform.text.trim(),
+        platform: _platform,
         colorValue: _color,
         iconKey: _iconKey,
         isDefault: widget.channel?.isDefault ?? false,

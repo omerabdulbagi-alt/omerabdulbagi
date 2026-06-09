@@ -156,6 +156,17 @@ enum TaskStatus {
   final String label;
 }
 
+enum RecurrenceType {
+  none('No Repeat'),
+  daily('Daily'),
+  weekly('Weekly'),
+  monthly('Monthly'),
+  custom('Custom');
+
+  const RecurrenceType(this.label);
+  final String label;
+}
+
 class ManualTask {
   const ManualTask({
     this.id,
@@ -168,6 +179,11 @@ class ManualTask {
     this.notes = '',
     this.completed = false,
     this.reminderAt,
+    this.recurrenceType = RecurrenceType.none,
+    this.recurrenceInterval = 1,
+    this.recurrenceWeekdays = const [],
+    this.recurrenceMonthDay,
+    this.recurrenceGroup,
   });
 
   final int? id;
@@ -180,6 +196,11 @@ class ManualTask {
   final String notes;
   final bool completed;
   final DateTime? reminderAt;
+  final RecurrenceType recurrenceType;
+  final int recurrenceInterval;
+  final List<int> recurrenceWeekdays;
+  final int? recurrenceMonthDay;
+  final String? recurrenceGroup;
 
   Map<String, Object?> toMap() => {
     'id': id,
@@ -192,6 +213,11 @@ class ManualTask {
     'notes': notes,
     'completed': completed ? 1 : 0,
     'reminder_at': reminderAt?.toIso8601String(),
+    'recurrence_type': recurrenceType.name,
+    'recurrence_interval': recurrenceInterval,
+    'recurrence_weekdays': recurrenceWeekdays.join(','),
+    'recurrence_month_day': recurrenceMonthDay,
+    'recurrence_group': recurrenceGroup,
     'created_at': DateTime.now().toIso8601String(),
   };
 
@@ -207,6 +233,11 @@ class ManualTask {
     bool? completed,
     DateTime? reminderAt,
     bool clearReminder = false,
+    RecurrenceType? recurrenceType,
+    int? recurrenceInterval,
+    List<int>? recurrenceWeekdays,
+    int? recurrenceMonthDay,
+    String? recurrenceGroup,
   }) {
     return ManualTask(
       id: id ?? this.id,
@@ -219,6 +250,11 @@ class ManualTask {
       notes: notes ?? this.notes,
       completed: completed ?? this.completed,
       reminderAt: clearReminder ? null : reminderAt ?? this.reminderAt,
+      recurrenceType: recurrenceType ?? this.recurrenceType,
+      recurrenceInterval: recurrenceInterval ?? this.recurrenceInterval,
+      recurrenceWeekdays: recurrenceWeekdays ?? this.recurrenceWeekdays,
+      recurrenceMonthDay: recurrenceMonthDay ?? this.recurrenceMonthDay,
+      recurrenceGroup: recurrenceGroup ?? this.recurrenceGroup,
     );
   }
 
@@ -235,6 +271,17 @@ class ManualTask {
     reminderAt: map['reminder_at'] == null
         ? null
         : DateTime.parse(map['reminder_at'] as String),
+    recurrenceType: RecurrenceType.values.byName(
+      map['recurrence_type'] as String? ?? 'none',
+    ),
+    recurrenceInterval: map['recurrence_interval'] as int? ?? 1,
+    recurrenceWeekdays: (map['recurrence_weekdays'] as String? ?? '')
+        .split(',')
+        .where((value) => value.isNotEmpty)
+        .map(int.parse)
+        .toList(),
+    recurrenceMonthDay: map['recurrence_month_day'] as int?,
+    recurrenceGroup: map['recurrence_group'] as String?,
   );
 }
 

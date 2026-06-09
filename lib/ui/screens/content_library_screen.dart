@@ -5,6 +5,7 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../widgets/content_editor_dialog.dart';
 import '../widgets/page_header.dart';
+import '../app_localizations.dart';
 
 class ContentLibraryScreen extends StatefulWidget {
   const ContentLibraryScreen({super.key, required this.controller});
@@ -34,12 +35,15 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PageHeader(
-            title: 'Content',
-            subtitle: 'Ideas, scripts, posts, and videos in one place',
+            title: context.tr('Content', 'المحتوى'),
+            subtitle: context.tr(
+              'Ideas, scripts, posts, and videos in one place',
+              'الأفكار والنصوص والمنشورات والفيديوهات في مكان واحد',
+            ),
             action: FilledButton.icon(
               onPressed: () => showContentEditor(context, widget.controller),
               icon: const Icon(Icons.add),
-              label: const Text('Add Content'),
+              label: Text(context.tr('Add Content', 'إضافة محتوى')),
             ),
           ),
           const SizedBox(height: 22),
@@ -48,17 +52,25 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
               children: [
                 TextField(
                   onChanged: (value) => setState(() => _query = value),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Search title or description',
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: context.tr(
+                      'Search title or description',
+                      'ابحث في العنوان أو الوصف',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<WorkflowStatus?>(
                   initialValue: _status,
-                  decoration: const InputDecoration(labelText: 'Status'),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Status', 'الحالة'),
+                  ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('All')),
+                    DropdownMenuItem(
+                      value: null,
+                      child: Text(context.tr('All', 'الكل')),
+                    ),
                     ...WorkflowStatus.values.map(
                       (status) => DropdownMenuItem(
                         value: status,
@@ -76,9 +88,12 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
                 Expanded(
                   child: TextField(
                     onChanged: (value) => setState(() => _query = value),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: 'Search title or description',
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: context.tr(
+                        'Search title or description',
+                        'ابحث في العنوان أو الوصف',
+                      ),
                     ),
                   ),
                 ),
@@ -87,9 +102,14 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
                   width: 180,
                   child: DropdownButtonFormField<WorkflowStatus?>(
                     initialValue: _status,
-                    decoration: const InputDecoration(labelText: 'Status'),
+                    decoration: InputDecoration(
+                      labelText: context.tr('Status', 'الحالة'),
+                    ),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('All')),
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text(context.tr('All', 'الكل')),
+                      ),
                       ...WorkflowStatus.values.map(
                         (status) => DropdownMenuItem(
                           value: status,
@@ -106,7 +126,14 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
           Expanded(
             child: Card(
               child: items.isEmpty
-                  ? const Center(child: Text('No matching content'))
+                  ? Center(
+                      child: Text(
+                        context.tr(
+                          'No matching content',
+                          'لا يوجد محتوى مطابق',
+                        ),
+                      ),
+                    )
                   : ListView.separated(
                       itemCount: items.length,
                       separatorBuilder: (_, _) => const Divider(height: 1),
@@ -141,14 +168,14 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
                                       _confirmDelete(item);
                                     }
                                   },
-                                  itemBuilder: (context) => const [
+                                  itemBuilder: (context) => [
                                     PopupMenuItem(
                                       value: 'edit',
-                                      child: Text('Edit'),
+                                      child: Text(context.tr('Edit', 'تعديل')),
                                     ),
                                     PopupMenuItem(
                                       value: 'delete',
-                                      child: Text('Delete'),
+                                      child: Text(context.tr('Delete', 'حذف')),
                                     ),
                                   ],
                                 )
@@ -163,7 +190,7 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
                                       ),
                                     const SizedBox(width: 8),
                                     IconButton(
-                                      tooltip: 'Edit',
+                                      tooltip: context.tr('Edit', 'تعديل'),
                                       onPressed: () => showContentEditor(
                                         context,
                                         widget.controller,
@@ -172,7 +199,7 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
                                       icon: const Icon(Icons.edit_outlined),
                                     ),
                                     IconButton(
-                                      tooltip: 'Delete',
+                                      tooltip: context.tr('Delete', 'حذف'),
                                       onPressed: () => _confirmDelete(item),
                                       icon: const Icon(Icons.delete_outline),
                                     ),
@@ -197,16 +224,16 @@ class _ContentLibraryScreenState extends State<ContentLibraryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete content'),
+        title: Text(context.tr('Delete content', 'حذف المحتوى')),
         content: Text('Delete "${item.title}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('Cancel', 'إلغاء')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete', 'حذف')),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../widgets/page_header.dart';
 import '../widgets/task_editor_dialog.dart';
+import '../app_localizations.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key, required this.controller});
@@ -32,8 +33,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PageHeader(
-            title: 'Calendar',
-            subtitle: 'Tasks organized by date',
+            title: context.tr('Calendar', 'التقويم'),
+            subtitle: context.tr(
+              'Tasks organized by date',
+              'المهام مرتبة حسب التاريخ',
+            ),
             action: Row(
               children: [
                 IconButton(

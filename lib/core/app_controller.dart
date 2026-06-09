@@ -1,5 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
+import 'app_settings.dart';
 import 'content_repository.dart';
 import 'models.dart';
 import 'notification_service.dart';
@@ -14,9 +15,11 @@ class AppController extends ChangeNotifier {
   List<ManualTask> tasks = [];
   Set<String> dismissedSuggestionKeys = {};
   bool isLoading = true;
+  AppSettings settings = const AppSettings();
 
   Future<void> initialize() async {
     await _notifications.initialize();
+    settings = await _repository.getSettings();
     await refresh();
   }
 
@@ -44,8 +47,15 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> saveTask(ManualTask task) async {
-    final id = await _repository.saveTask(task);
-    await _notifications.syncTask(task.copyWith(id: id));
+    if (task.id == null && task.recurrenceType != RecurrenceType.none) {
+      for (final occurrence in _generateOccurrences(task)) {
+        final id = await _repository.saveTask(occurrence);
+        await _notifications.syncTask(occurrence.copyWith(id: id));
+      }
+    } else {
+      final id = await _repository.saveTask(task);
+      await _notifications.syncTask(task.copyWith(id: id));
+    }
     await refresh();
   }
 
@@ -70,10 +80,22 @@ class AppController extends ChangeNotifier {
     await refresh();
   }
 
-  Future<void> deleteCustomChannel(Channel channel) async {
-    if (channel.id == null || channel.isDefault) return;
-    await _repository.deleteCustomChannel(channel.id!);
+  Future<void> deleteChannel(Channel channel) async {
+    if (channel.id == null) return;
+    await _repository.deleteChannel(channel.id!);
     await refresh();
+  }
+
+  Future<void> setLocale(String localeCode) async {
+    settings = settings.copyWith(localeCode: localeCode);
+    await _repository.saveSettings(settings);
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode themeMode) async {
+    settings = settings.copyWith(themeMode: themeMode);
+    await _repository.saveSettings(settings);
+    notifyListeners();
   }
 
   Future<void> dismissSuggestion(String key) async {
@@ -105,55 +127,65 @@ class AppController extends ChangeNotifier {
     return null;
   }
 
-  List<DashboardSuggestion> get todaySuggestions {
-    final today = DateTime.now();
-    final dayIndex = today.difference(DateTime(2026, 1, 1)).inDays;
-    final candidates = <DashboardSuggestion>[
-      const DashboardSuggestion(
-        key: 'madih_daily',
-        title: 'Madih daily content',
-        channelName: 'Madih',
-        type: TaskType.audio,
-        reason: 'Daily schedule',
-      ),
-      if (dayIndex % 3 == 0)
-        const DashboardSuggestion(
-          key: 'zooli_arabic_rotation',
-          title: 'Zooli Arabic video',
-          channelName: 'Zooli Arabic',
-          type: TaskType.video,
-          reason: 'Every 3 days',
-        ),
-      if (dayIndex % 3 == 1)
-        const DashboardSuggestion(
-          key: 'zooli_english_rotation',
-          title: 'Zooli English video',
-          channelName: 'Zooli English',
-          type: TaskType.video,
-          reason: 'Alternating 3-day schedule',
-        ),
-      if (dayIndex % 3 == 2)
-        const DashboardSuggestion(
-          key: 'zooli_tiktok_rotation',
-          title: 'Zooli Arabic TikTok short',
-          channelName: 'Zooli Arabic TikTok',
-          type: TaskType.short,
-          reason: 'Every 3 days',
-        ),
-      if (<int>{1, 3, 6}.contains(today.weekday))
-        const DashboardSuggestion(
-          key: 'balad360_weekly',
-          title: 'Balad360 post',
-          channelName: 'Balad360',
-          type: TaskType.post,
-          reason: '3 posts per week',
-        ),
-    ];
-    return candidates
-        .where(
-          (item) =>
-              !dismissedSuggestionKeys.contains(item.key) &&
-              channelNamed(item.channelName)?.archived != true,
+  List<DashboardSuggestion> get todaySuggestions => const [];
+
+  List<ManualTask> _generateOccurrences(ManualTask task) {
+    final dates = <DateTime>[DateUtils.dateOnly(task.dueDate)];
+    final end = task.dueDate.add(const Duration(days: 366));
+    final group = DateTime.now().microsecondsSinceEpoch.toString();
+    var cursor = DateUtils.dateOnly(task.dueDate);
+
+    if (task.recurrenceType == RecurrenceType.daily ||
+        (task.recurrenceType == RecurrenceType.custom &&
+            task.recurrenceWeekdays.isEmpty &&
+            task.recurrenceMonthDay == null)) {
+      while (true) {
+        cursor = cursor.add(Duration(days: task.recurrenceInterval));
+        if (cursor.isAfter(end)) break;
+        dates.add(cursor);
+      }
+    } else if (task.recurrenceType == RecurrenceType.weekly ||
+        (task.recurrenceType == RecurrenceType.custom &&
+            task.recurrenceWeekdays.isNotEmpty)) {
+      final weekdays = task.recurrenceWeekdays.isEmpty
+          ? <int>{task.dueDate.weekday}
+          : task.recurrenceWeekdays.toSet();
+      for (
+        var date = cursor.add(const Duration(days: 1));
+        !date.isAfter(end);
+        date = date.add(const Duration(days: 1))
+      ) {
+        final weeks = date.difference(cursor).inDays ~/ 7;
+        if (weekdays.contains(date.weekday) &&
+            weeks % task.recurrenceInterval == 0) {
+          dates.add(date);
+        }
+      }
+    } else {
+      final day = task.recurrenceMonthDay ?? task.dueDate.day;
+      for (var month = 1; month <= 12; month += task.recurrenceInterval) {
+        final targetMonth = task.dueDate.month + month;
+        final lastDay = DateUtils.getDaysInMonth(
+          task.dueDate.year + (targetMonth - 1) ~/ 12,
+          (targetMonth - 1) % 12 + 1,
+        );
+        dates.add(
+          DateTime(
+            task.dueDate.year + (targetMonth - 1) ~/ 12,
+            (targetMonth - 1) % 12 + 1,
+            day.clamp(1, lastDay),
+          ),
+        );
+      }
+    }
+
+    return dates
+        .map(
+          (date) => task.copyWith(
+            dueDate: date,
+            completed: false,
+            recurrenceGroup: group,
+          ),
         )
         .toList();
   }

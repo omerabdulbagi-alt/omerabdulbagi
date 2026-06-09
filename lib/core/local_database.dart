@@ -51,7 +51,6 @@ class LocalDatabase {
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
             await _createMetadataTable(db);
-            await _seedSampleContent(db);
           }
           if (oldVersion < 3) {
             await _migrateToManualTasks(db);
@@ -85,48 +84,6 @@ class LocalDatabase {
       'ALTER TABLE channels ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
     );
     await _createDismissedSuggestionsTable(db);
-
-    const defaults = {
-      'Zooli Arabic': ['video', 0xFF5B8CFF],
-      'Zooli English': ['language', 0xFF64B5F6],
-      'Zooli Arabic TikTok': ['short', 0xFFB47CFF],
-      'Balad360': ['public', 0xFF4F7CFF],
-      'Quran': ['book', 0xFF49C98A],
-      'Madih': ['audio', 0xFFFFA94D],
-    };
-    for (final entry in defaults.entries) {
-      final existing = await db.query(
-        'channels',
-        where: 'name = ?',
-        whereArgs: [entry.key],
-        limit: 1,
-      );
-      if (existing.isEmpty) {
-        await db.insert('channels', {
-          'name': entry.key,
-          'platform': entry.key == 'Balad360'
-              ? 'Facebook'
-              : entry.key == 'Zooli Arabic TikTok'
-              ? 'TikTok'
-              : 'YouTube',
-          'color_value': entry.value[1],
-          'icon_key': entry.value[0],
-          'is_default': 1,
-          'archived': 0,
-        });
-      } else {
-        await db.update(
-          'channels',
-          {
-            'icon_key': entry.value[0],
-            'color_value': entry.value[1],
-            'is_default': 1,
-          },
-          where: 'name = ?',
-          whereArgs: [entry.key],
-        );
-      }
-    }
 
     await db.execute("""
       UPDATE daily_tasks
@@ -222,6 +179,11 @@ class LocalDatabase {
       'key': key,
       'value': value,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> close() async {
+    await _database?.close();
+    _database = null;
   }
 
   Future<void> _upgradeToEnglishChannelsAndTaskState(Database db) async {
@@ -335,150 +297,4 @@ class LocalDatabase {
     ''');
     await db.execute('DROP TABLE generated_tasks');
   }
-
-  Future<void> _seedSampleContent(DatabaseExecutor db) async {
-    const seedKey = 'realistic_sample_content_v1';
-    final existingSeed = await db.query(
-      'app_metadata',
-      where: 'key = ?',
-      whereArgs: [seedKey],
-      limit: 1,
-    );
-    if (existingSeed.isNotEmpty) return;
-
-    final channels = await db.query('channels');
-    int channelId(String name, String platform) {
-      final channel = channels.firstWhere(
-        (row) => row['name'] == name && row['platform'] == platform,
-      );
-      return channel['id'] as int;
-    }
-
-    final now = DateTime.now();
-    DateTime scheduledDay(int offset, [int hour = 10]) =>
-        DateTime(now.year, now.month, now.day + offset, hour);
-
-    final samples = [
-      _SampleContent(
-        title: 'كيف تخطط لأسبوع منتج بدون ضغط؟',
-        channelId: channelId('Zooli Arabic', 'YouTube'),
-        type: 'Full Video',
-        status: 'editing',
-        description:
-            'حلقة عملية عن تقسيم الأهداف الأسبوعية وبناء روتين بسيط قابل للاستمرار.',
-        notes: 'إضافة أمثلة بصرية ومراجعة المقدمة قبل التصدير.',
-        scheduledDate: scheduledDay(2, 18),
-      ),
-      _SampleContent(
-        title: '5 Simple Habits for a More Focused Week',
-        channelId: channelId('Zooli English', 'YouTube'),
-        type: 'Full Video',
-        status: 'scripting',
-        description:
-            'A practical video about planning, focus, and building sustainable weekly habits.',
-        notes: 'Finish the hook and prepare the B-roll list.',
-        scheduledDate: scheduledDay(4, 17),
-      ),
-      _SampleContent(
-        title: 'ورد اليوم: سورة الملك مع معاني مختارة',
-        channelId: channelId('Quran', 'YouTube'),
-        type: 'Short Video',
-        status: 'ready',
-        description:
-            'تلاوة هادئة لآيات من سورة الملك مع معنى موجز يساعد على التدبر.',
-        notes: 'الصوت والصورة جاهزان للنشر.',
-        scheduledDate: scheduledDay(0, 20),
-      ),
-      _SampleContent(
-        title: 'مديح الصباح: الصلاة على النبي ﷺ',
-        channelId: channelId('Madih', 'YouTube'),
-        type: 'Short Video',
-        status: 'planned',
-        description: 'مقطع صباحي يومي قصير من المديح والصلاة على النبي.',
-        notes: 'اختيار خلفية هادئة وكتابة النص على الشاشة.',
-        scheduledDate: scheduledDay(1, 8),
-      ),
-      _SampleContent(
-        title: 'تلاوة يوم الجمعة: سورة الكهف',
-        channelId: channelId('Quran', 'YouTube'),
-        type: 'Full Video',
-        status: 'published',
-        description: 'تلاوة مختارة من سورة الكهف للنشر الأسبوعي.',
-        notes: 'تم النشر ومراجعة الوصف.',
-        scheduledDate: scheduledDay(-1, 12),
-        publishedUrl: 'https://youtube.com/',
-      ),
-      _SampleContent(
-        title: 'ثلاثة أماكن تستحق الزيارة في عطلة نهاية الأسبوع',
-        channelId: channelId('Balad360', 'Facebook'),
-        type: 'Post',
-        status: 'planned',
-        description:
-            'منشور مصور يقترح ثلاث وجهات محلية مناسبة للعائلة والأصدقاء.',
-        notes: 'تأكيد أوقات العمل وإضافة الموقع لكل وجهة.',
-        scheduledDate: scheduledDay(3, 14),
-      ),
-      _SampleContent(
-        title: 'صورة اليوم: حكاية من السوق القديم',
-        channelId: channelId('Balad360', 'Facebook'),
-        type: 'Post',
-        status: 'published',
-        description:
-            'صورة أرشيفية مع قصة قصيرة عن تفاصيل الحياة في السوق القديم.',
-        notes: 'تم النشر مع سؤال للجمهور في نهاية النص.',
-        scheduledDate: scheduledDay(0, 11),
-        publishedUrl: 'https://facebook.com/',
-      ),
-      _SampleContent(
-        title: 'نصيحة في 30 ثانية: ابدأ بأصعب مهمة',
-        channelId: channelId('Zooli Arabic TikTok', 'TikTok'),
-        type: 'Short Video',
-        status: 'recording',
-        description:
-            'مقطع سريع يشرح لماذا يساعد بدء اليوم بالمهمة الأصعب على الإنجاز.',
-        notes: 'تصوير نسختين بخطافين مختلفين.',
-        scheduledDate: scheduledDay(0, 19),
-      ),
-    ];
-
-    for (final sample in samples) {
-      await db.insert('content_items', sample.toMap());
-    }
-
-    await db.insert('app_metadata', {'key': seedKey, 'value': 'inserted'});
-  }
-}
-
-class _SampleContent {
-  const _SampleContent({
-    required this.title,
-    required this.channelId,
-    required this.type,
-    required this.status,
-    required this.description,
-    required this.notes,
-    required this.scheduledDate,
-    this.publishedUrl = '',
-  });
-
-  final String title;
-  final int channelId;
-  final String type;
-  final String status;
-  final String description;
-  final String notes;
-  final DateTime scheduledDate;
-  final String publishedUrl;
-
-  Map<String, Object?> toMap() => {
-    'title': title,
-    'channel_id': channelId,
-    'type': type,
-    'status': status,
-    'description': description,
-    'notes': notes,
-    'scheduled_date': scheduledDate.toIso8601String(),
-    'published_url': publishedUrl,
-    'updated_at': DateTime.now().toIso8601String(),
-  };
 }

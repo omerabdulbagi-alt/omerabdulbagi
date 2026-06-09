@@ -67,9 +67,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
   late bool _completed;
   DateTime? _reminderAt;
   late RecurrenceType _recurrenceType;
-  late int _recurrenceInterval;
   late Set<int> _recurrenceWeekdays;
-  int? _recurrenceMonthDay;
   bool _saving = false;
 
   @override
@@ -89,9 +87,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
     _completed = task?.completed ?? false;
     _reminderAt = task?.reminderAt;
     _recurrenceType = task?.recurrenceType ?? RecurrenceType.none;
-    _recurrenceInterval = task?.recurrenceInterval ?? 1;
     _recurrenceWeekdays = (task?.recurrenceWeekdays ?? const <int>[]).toSet();
-    _recurrenceMonthDay = task?.recurrenceMonthDay;
   }
 
   @override
@@ -212,29 +208,10 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 ),
                 if (_recurrenceType == RecurrenceType.custom) ...[
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: _recurrenceInterval,
-                    decoration: InputDecoration(
-                      labelText: context.tr('Repeat every', 'التكرار كل'),
-                    ),
-                    items: List.generate(
-                      30,
-                      (index) => DropdownMenuItem(
-                        value: index + 1,
-                        child: Text('${index + 1}'),
-                      ),
-                    ),
-                    onChanged: (value) =>
-                        setState(() => _recurrenceInterval = value!),
-                  ),
-                  const SizedBox(height: 12),
                   Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: Text(
-                      context.tr(
-                        'Days of week (leave empty for every N days)',
-                        'أيام الأسبوع (اتركها فارغة للتكرار كل عدد من الأيام)',
-                      ),
+                      context.tr('Choose weekdays', 'اختر أيام الأسبوع'),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -255,20 +232,6 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                         }),
                       );
                     }),
-                  ),
-                  const SizedBox(height: 8),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      context.tr(
-                        'Use first day of each month',
-                        'استخدم اليوم الأول من كل شهر',
-                      ),
-                    ),
-                    value: _recurrenceMonthDay == 1,
-                    onChanged: (value) => setState(
-                      () => _recurrenceMonthDay = value == true ? 1 : null,
-                    ),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -416,6 +379,20 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_recurrenceType == RecurrenceType.custom &&
+        _recurrenceWeekdays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.tr(
+              'Choose at least one weekday.',
+              'اختر يوماً واحداً على الأقل.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
     setState(() => _saving = true);
     await widget.controller.saveTask(
       ManualTask(
@@ -430,12 +407,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
         completed: _completed,
         reminderAt: _reminderAt,
         recurrenceType: _recurrenceType,
-        recurrenceInterval: _recurrenceType == RecurrenceType.daily
-            ? 1
-            : _recurrenceType == RecurrenceType.weekly ||
-                  _recurrenceType == RecurrenceType.monthly
-            ? 1
-            : _recurrenceInterval,
+        recurrenceInterval: 1,
         recurrenceWeekdays:
             _recurrenceType == RecurrenceType.weekly
                   ? [_dueDate.weekday]
@@ -443,7 +415,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
               ..sort(),
         recurrenceMonthDay: _recurrenceType == RecurrenceType.monthly
             ? _dueDate.day
-            : _recurrenceMonthDay,
+            : null,
         recurrenceGroup: widget.task?.recurrenceGroup,
       ),
     );

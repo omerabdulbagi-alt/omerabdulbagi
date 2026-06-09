@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_controller.dart';
 import '../widgets/page_header.dart';
 import '../app_localizations.dart';
+import '../widgets/contentflow_brand.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.controller});
@@ -106,23 +107,11 @@ class SettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    CircleAvatar(child: Icon(Icons.info_outline)),
-                    SizedBox(width: 12),
-                    Text(
-                      'About ContentFlow',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
+                const ContentFlowBrand(logoSize: 52),
                 SizedBox(height: 18),
                 _AboutRow(
                   label: context.tr('Version', 'الإصدار'),
-                  value: '2.0.0 (Build 200)',
+                  value: '3.0.0 (Build 300)',
                 ),
                 SizedBox(height: 10),
                 _AboutRow(

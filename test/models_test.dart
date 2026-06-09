@@ -57,4 +57,46 @@ void main() {
     expect(restored.recurrenceWeekdays, [1, 4]);
     expect(restored.recurrenceGroup, 'series-1');
   });
+
+  test('custom weekday recurrence creates only selected weekdays', () {
+    final task = ManualTask(
+      title: 'Publish',
+      channelId: 1,
+      type: TaskType.post,
+      dueDate: DateTime(2026, 6, 8),
+      priority: TaskPriority.medium,
+      status: TaskStatus.planned,
+      recurrenceType: RecurrenceType.custom,
+      recurrenceWeekdays: const [DateTime.monday, DateTime.thursday],
+    );
+
+    final occurrences = generateTaskOccurrences(task, horizonDays: 14);
+
+    expect(occurrences.map((item) => item.dueDate.weekday).toSet(), {
+      DateTime.monday,
+      DateTime.thursday,
+    });
+    expect(occurrences.length, 5);
+  });
+
+  test('recurring reminders shift with each occurrence', () {
+    final task = ManualTask(
+      title: 'Record',
+      channelId: 1,
+      type: TaskType.video,
+      dueDate: DateTime(2026, 6, 9),
+      priority: TaskPriority.medium,
+      status: TaskStatus.planned,
+      reminderAt: DateTime(2026, 6, 9, 9),
+      recurrenceType: RecurrenceType.daily,
+    );
+
+    final occurrences = generateTaskOccurrences(task, horizonDays: 2);
+
+    expect(occurrences.map((item) => item.reminderAt), [
+      DateTime(2026, 6, 9, 9),
+      DateTime(2026, 6, 10, 9),
+      DateTime(2026, 6, 11, 9),
+    ]);
+  });
 }

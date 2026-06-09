@@ -48,7 +48,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> saveTask(ManualTask task) async {
     if (task.id == null && task.recurrenceType != RecurrenceType.none) {
-      for (final occurrence in _generateOccurrences(task)) {
+      for (final occurrence in generateTaskOccurrences(task)) {
         final id = await _repository.saveTask(occurrence);
         await _notifications.syncTask(occurrence.copyWith(id: id));
       }
@@ -128,67 +128,6 @@ class AppController extends ChangeNotifier {
   }
 
   List<DashboardSuggestion> get todaySuggestions => const [];
-
-  List<ManualTask> _generateOccurrences(ManualTask task) {
-    final dates = <DateTime>[DateUtils.dateOnly(task.dueDate)];
-    final end = task.dueDate.add(const Duration(days: 366));
-    final group = DateTime.now().microsecondsSinceEpoch.toString();
-    var cursor = DateUtils.dateOnly(task.dueDate);
-
-    if (task.recurrenceType == RecurrenceType.daily ||
-        (task.recurrenceType == RecurrenceType.custom &&
-            task.recurrenceWeekdays.isEmpty &&
-            task.recurrenceMonthDay == null)) {
-      while (true) {
-        cursor = cursor.add(Duration(days: task.recurrenceInterval));
-        if (cursor.isAfter(end)) break;
-        dates.add(cursor);
-      }
-    } else if (task.recurrenceType == RecurrenceType.weekly ||
-        (task.recurrenceType == RecurrenceType.custom &&
-            task.recurrenceWeekdays.isNotEmpty)) {
-      final weekdays = task.recurrenceWeekdays.isEmpty
-          ? <int>{task.dueDate.weekday}
-          : task.recurrenceWeekdays.toSet();
-      for (
-        var date = cursor.add(const Duration(days: 1));
-        !date.isAfter(end);
-        date = date.add(const Duration(days: 1))
-      ) {
-        final weeks = date.difference(cursor).inDays ~/ 7;
-        if (weekdays.contains(date.weekday) &&
-            weeks % task.recurrenceInterval == 0) {
-          dates.add(date);
-        }
-      }
-    } else {
-      final day = task.recurrenceMonthDay ?? task.dueDate.day;
-      for (var month = 1; month <= 12; month += task.recurrenceInterval) {
-        final targetMonth = task.dueDate.month + month;
-        final lastDay = DateUtils.getDaysInMonth(
-          task.dueDate.year + (targetMonth - 1) ~/ 12,
-          (targetMonth - 1) % 12 + 1,
-        );
-        dates.add(
-          DateTime(
-            task.dueDate.year + (targetMonth - 1) ~/ 12,
-            (targetMonth - 1) % 12 + 1,
-            day.clamp(1, lastDay),
-          ),
-        );
-      }
-    }
-
-    return dates
-        .map(
-          (date) => task.copyWith(
-            dueDate: date,
-            completed: false,
-            recurrenceGroup: group,
-          ),
-        )
-        .toList();
-  }
 
   String _dateKey(DateTime date) =>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-'

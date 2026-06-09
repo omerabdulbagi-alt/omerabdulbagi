@@ -296,6 +296,62 @@ TaskType _taskTypeFromDatabase(String value) {
   };
 }
 
+List<ManualTask> generateTaskOccurrences(
+  ManualTask task, {
+  int horizonDays = 366,
+}) {
+  final start = DateTime(
+    task.dueDate.year,
+    task.dueDate.month,
+    task.dueDate.day,
+  );
+  final end = start.add(Duration(days: horizonDays));
+  final dates = <DateTime>[start];
+  final group = DateTime.now().microsecondsSinceEpoch.toString();
+
+  if (task.recurrenceType == RecurrenceType.daily) {
+    for (
+      var date = start.add(const Duration(days: 1));
+      !date.isAfter(end);
+      date = date.add(const Duration(days: 1))
+    ) {
+      dates.add(date);
+    }
+  } else if (task.recurrenceType == RecurrenceType.weekly ||
+      task.recurrenceType == RecurrenceType.custom) {
+    final weekdays = task.recurrenceType == RecurrenceType.weekly
+        ? <int>{start.weekday}
+        : task.recurrenceWeekdays.toSet();
+    for (
+      var date = start.add(const Duration(days: 1));
+      !date.isAfter(end);
+      date = date.add(const Duration(days: 1))
+    ) {
+      if (weekdays.contains(date.weekday)) dates.add(date);
+    }
+  } else if (task.recurrenceType == RecurrenceType.monthly) {
+    final day = task.recurrenceMonthDay ?? start.day;
+    for (var offset = 1; offset <= 12; offset++) {
+      final monthIndex = start.month + offset;
+      final year = start.year + (monthIndex - 1) ~/ 12;
+      final month = (monthIndex - 1) % 12 + 1;
+      final lastDay = DateTime(year, month + 1, 0).day;
+      dates.add(DateTime(year, month, day.clamp(1, lastDay)));
+    }
+  }
+
+  return dates.map((date) {
+    final reminder = task.reminderAt;
+    final shiftedReminder = reminder?.add(date.difference(start));
+    return task.copyWith(
+      dueDate: date,
+      completed: false,
+      reminderAt: shiftedReminder,
+      recurrenceGroup: group,
+    );
+  }).toList();
+}
+
 class DashboardSuggestion {
   const DashboardSuggestion({
     required this.key,

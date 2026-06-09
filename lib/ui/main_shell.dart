@@ -11,6 +11,7 @@ import 'screens/settings_screen.dart';
 import 'widgets/quick_create_sheet.dart';
 import 'app_localizations.dart';
 import 'widgets/channel_editor_dialog.dart';
+import 'widgets/contentflow_brand.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.controller});
@@ -56,10 +57,7 @@ class _MainShellState extends State<MainShell> {
           ),
         );
         final screens = [
-          DashboardScreen(
-            controller: widget.controller,
-            onNavigate: (index) => setState(() => _selectedIndex = index),
-          ),
+          DashboardScreen(controller: widget.controller),
           ContentLibraryScreen(controller: widget.controller),
           WorkflowScreen(controller: widget.controller),
           CalendarScreen(controller: widget.controller),
@@ -83,21 +81,9 @@ class _MainShellState extends State<MainShell> {
                   child: SafeArea(
                     child: Column(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.auto_awesome_mosaic, size: 30),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'ContentFlow',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: ContentFlowBrand(),
                         ),
                         const Divider(height: 1),
                         Expanded(
@@ -170,7 +156,7 @@ class _MainShellState extends State<MainShell> {
                         setState(() => _selectedIndex = index),
                     leading: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Icon(Icons.auto_awesome_mosaic, size: 32),
+                      child: ContentFlowBrand(showTagline: false, logoSize: 38),
                     ),
                     destinations: destinations,
                   ),

@@ -1,10 +1,11 @@
-# ContentFlow
+# ContentFlow v3
 
 Plan • Create • Publish
 
-ContentFlow is a bilingual content planning and productivity app for creators.
-It includes channels, content workflows, recurring tasks, reminders, a smart
-dashboard, light and dark themes, and local SQLite storage.
+ContentFlow is a bilingual, mobile-first planning and productivity app for
+creators. It includes user-managed channels, pending and completed task lists,
+daily/weekly/monthly/custom-weekday recurrence, reminders, light and dark
+themes, and local SQLite storage.
 
 ## Getting Started
 
